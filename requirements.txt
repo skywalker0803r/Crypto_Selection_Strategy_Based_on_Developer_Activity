@@ -1,7 +1,8 @@
 gradio==5.38.0
 matplotlib==3.10.3
 pandas==2.3.1
-protobuf==6.31.1
 python-dotenv==1.1.1
 Requests==2.32.4
 google-generativeai==0.8.5
+protobuf==5.26.1
+google-ai-generativelanguage==0.6.15
