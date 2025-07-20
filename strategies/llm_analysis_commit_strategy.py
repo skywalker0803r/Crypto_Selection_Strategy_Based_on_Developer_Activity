@@ -22,6 +22,9 @@ def llm_strategy_generator(commit_df, price_series, buy_score_threshold, sell_sc
 
     # --- Main Loop: Iterate through each day in the price series ---
     total_days = len(price_series)
+    total_commit_number = len(commit_df)
+    print(f"total commit number:{total_commit_number}")
+    count = 0
     for i, (current_date, current_price) in enumerate(price_series.items()):
         if progress:
             progress(i / total_days, desc=f"Analyzing & Backtesting Day {i + 1}/{total_days}")
@@ -30,7 +33,8 @@ def llm_strategy_generator(commit_df, price_series, buy_score_threshold, sell_sc
         todays_commits = commit_df[commit_df['date'].dt.date == current_date.date()]
         daily_score = 0
         if not todays_commits.empty:
-            for _, row in todays_commits.iterrows():
+            for _, (_, row) in enumerate(todays_commits.iterrows()):
+                print(f"commit 處理進度:{count}/{total_commit_number}")
                 analysis_result = get_llm_analysis(row['message'])
                 impact = analysis_result.get("對幣價的影響", "無明顯影響")
                 if "上漲" in impact:
@@ -38,6 +42,7 @@ def llm_strategy_generator(commit_df, price_series, buy_score_threshold, sell_sc
                 elif "下跌" in impact:
                     daily_score -= 1
                 time.sleep(0.5) # Small delay between individual API calls
+                count += 1
 
         # 2. Generate signal for the current day
         signal = 0
