@@ -4,6 +4,9 @@ from datetime import datetime, timedelta
 import config
 from data_fetcher import get_binance_trading_pairs
 from app_logic import analyze_crypto_activity
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # --- UI Initialization ---
 

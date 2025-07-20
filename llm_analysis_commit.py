@@ -17,6 +17,7 @@ load_dotenv()
 TOKEN = os.getenv("GITHUB_TOKEN")
 HEADERS = {"Authorization": f"token {TOKEN}"} if TOKEN else {}
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+print(f"GEMINI_API_KEY : {GEMINI_API_KEY}")
 
 # --- Cache Management ---
 def load_cache():

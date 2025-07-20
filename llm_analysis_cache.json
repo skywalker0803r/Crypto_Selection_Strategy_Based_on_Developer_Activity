@@ -1,0 +1,110 @@
+{
+    "cmd/geth: update vcheck testdata, add docs on generating signatures (#32121)\n\nFixed typo in security release URL by replacing:\nOld: https://blog.ethereum.org/2020/11/12/geth_security_release/\nNew: https://blog.ethereum.org/2020/11/12/geth-security-release/\n\n---------\n\nCo-authored-by: lightclient <lightclient@protonmail.com>": {
+        "LLM 總結分析": "這個提交主要針對 Geth 客戶端進行維護與改進。它更新了版本檢查的測試數據，有助於增強系統的穩定性和準確性；同時增加了關於簽名生成的文檔，提升了開發者和用戶對Geth操作的理解與便利性。最重要的是，它修正了一個在安全發布網址中的排版錯誤，確保用戶可以正確地訪問重要的安全資訊。整體而言，這顯示了專案團隊對細節的關注、對用戶體驗的重視以及對核心基礎設施維護的嚴謹態度。",
+        "對幣價的影響": "無明顯影響"
+    },
+    ".github: remove karalabe from CODEOWNERS": {
+        "LLM 總結分析": "此 Commit 訊息表示將名為「karalabe」的成員從專案的 `.github/CODEOWNERS` 文件中移除。`CODEOWNERS` 文件用於定義負責特定程式碼模組的開發者，通常是核心貢獻者或主要審閱者。移除某人（特別是如果「karalabe」是一位重要的核心開發者，例如與以太坊相關的 Gábor Karalabe）通常意味著該成員不再是該部分程式碼的維護者或審閱者，或者可能已從專案的核心開發團隊中退出或轉變了角色。這表明專案團隊的組成或職責分配可能發生了變化。",
+        "對幣價的影響": "潛在下跌"
+    },
+    "eth/downloader: fix ancient limit in snap sync (#32188)\n\nThis pull request fixes an issue in disabling direct-ancient mode in\nsnap sync.\n\nSpecifically, if `origin >= frozen && origin != 0`, it implies a part of\nchain data has been written into the key-value store, all the following \nwrites into ancient store scheduled by downloader will be rejected \nwith error \n\n`ERROR[07-10|03:46:57.924] Error importing chain data to ancients\nerr=\"can't add block 1166 hash: the append operation is out-order: have\n1166 want 0\"`.\n\nThis issue is detected by the https://github.com/ethpandaops/kurtosis-sync-test, \nwhich initiates the first snap sync cycle without the finalized header and\nimplicitly disables the direct-ancient mode. A few seconds later the second \nsnap sync cycle is initiated with the finalized information and direct-ancient mode\nis enabled incorrectly.": {
+        "LLM 總結分析": "這個提交修復了以太坊客戶端在快照同步（snap sync）過程中處理舊區塊數據（ancient store）的一個關鍵問題。此前，在特定條件下，客戶端會錯誤地處理「直接舊區塊模式」（direct-ancient mode）的啟用或禁用，導致區塊鏈數據寫入時出現「順序錯誤」（out-of-order）並拒絕匯入，進而造成同步失敗或數據不一致。此修復顯著提升了客戶端同步過程的穩定性與可靠性，避免了嚴重的區塊導入錯誤。",
+        "對幣價的影響": "無明顯影響"
+    },
+    "core/types:  add block-level access list structures with encoding/decoding (#31948)\n\nThis adds the SSZ types from the \n[EIP-7928](https://eips.ethereum.org/EIPS/eip-7928) and also adds\nencoder/decoder generation using https://github.com/ferranbt/fastssz.\n\nThe fastssz dependency is updated because the generation will not work\nproperly with the master branch version due to a bug in fastssz.\n\n---------\n\nCo-authored-by: Gary Rong <garyrong0905@gmail.com>": {
+        "LLM 總結分析": "這個提交為核心資料型別加入了區塊層級的存取列表結構，並整合了 EIP-7928 中定義的 SSZ 型別，支援高效的編碼和解碼。同時，它也更新了 `fastssz` 相依性以確保生成工具的穩定運作。這是一個底層的協議改進或新功能支持，旨在提升核心資料處理的效率與穩定性。",
+        "對幣價的影響": "潛在的上漲。這個提交屬於核心協議的改進或新功能支援，這代表著專案的持續進步與技術成熟度。整合 EIPs（Ethereum Improvement Proposals）通常被視為網路基礎設施的強化，有助於提升網路的效率、擴展性或新功能的實施，這通常會對幣價產生正面的長期影響，儘管短期內可能不會立即顯現出劇烈波動。"
+    },
+    "all: fix outdated ethereum wiki json-rpc json-rpc doc links (#32209)\n\nReplace outdated wiki reference with ethereum.org\ndocumentation links": {
+        "LLM 總結分析": "此提交修正了專案中所有指向舊版 Ethereum 維基的 JSON-RPC 文件連結。這些過時的連結已被替換為指向 `ethereum.org` 官方網站上的最新文件。這有助於確保用戶和開發者能夠存取正確且最新的技術文檔，提升了資源的可達性和準確性。",
+        "對幣價的影響": "無明顯影響"
+    },
+    "miner: set sidecar version when recomputing proofs (#32199)\n\n- If the block number is `osaka` fork and needs to recompute some `blob\nproofs` to `cell proofs`, here also needs to set version to `1`.": {
+        "LLM 總結分析": "該提交是針對 `miner` 元件的技術更新，旨在確保在 `osaka` 分叉後，重新計算 `blob proofs` 為 `cell proofs` 時，能正確設定 `sidecar` 版本。這是一個關鍵的兼容性修正或效能改進，與網路的重大升級（`osaka` 分叉，可能涉及資料分片或擴展性提升）有關，確保了網路在升級後的穩定性與正確運行。",
+        "對幣價的影響": "上漲"
+    },
+    "eth/fetcher: fix announcement drop logic (#32210)\n\nThis PR fixes an issue in the tx_fetcher DoS prevention logic where the\ncode keeps the overflow amount (`want - maxTxAnnounces`) instead of the\nallowed amount (`maxTxAnnounces - used`). The specific changes are:\n\n- Correct slice indexing in the announcement drop logic\n- Extend the overflow test case to cover the inversion scenario": {
+        "LLM 總結分析": "此提交修復了交易擷取器 (tx_fetcher) 中阻斷服務 (DoS) 防護邏輯的一個關鍵錯誤。此錯誤導致系統錯誤地處理交易公告的溢出量，可能影響 DoS 防護的有效性。本次修復糾正了相關邏輯和索引問題，並擴展了測試案例，有助於提升網路的穩定性、安全性和抗攻擊能力。",
+        "對幣價的影響": "上漲"
+    },
+    "params: EIP-7892 - Blob Parameter Only Hardforks (#32193)\n\nThis is a resubmit of https://github.com/ethereum/go-ethereum/pull/31820\nagainst the `master` branch.\n\n---------\n\nCo-authored-by: Marius van der Wijden <m.vanderwijden@live.de>\nCo-authored-by: Gary Rong <garyrong0905@gmail.com>": {
+        "LLM 總結分析": "這個提交是關於以太坊核心客戶端 Geth 的一項重要更新，涉及以太坊改進提案 EIP-7892。該提案旨在透過「Blob 參數專用硬分叉」來優化或調整與資料 Blob 相關的參數。這表明了對以太坊擴展性路線圖（特別是與 EIP-4844 相關的 Danksharding 進程，旨在降低 Layer 2 交易成本）的持續投入和技術精進。此為先前提案的重新提交，並由多位以太坊核心開發者（包括知名開發者 Marius van der Wijden）共同完成，顯示其重要性與團隊的持續努力，以確保網路的長期可擴展性和效率。",
+        "對幣價的影響": "上漲"
+    },
+    "ethclient/gethclient: remove race condition in tests (#32206)\n\nalternative to https://github.com/ethereum/go-ethereum/pull/32200\n\nThe race condition is not happening yet, since there is only a single\ncall to `newTestBackend`, but there might be more in the future": {
+        "LLM 總結分析": "此提交修復了 `ethclient` 和 `gethclient` 測試框架中潛在的競爭條件。儘管該競爭條件目前尚未發生，但這是一項預防性措施，旨在防止未來開發和測試過程中的穩定性問題。這表明程式碼品質和可維護性得到了提升，屬於預防性維護工作。",
+        "對幣價的影響": "無明顯影響"
+    },
+    "accounts/keystore: update links to documenation (#32194)\n\n---\n\n\n**Description:**  \n- Replaced outdated GitHub wiki links with the official Ethereum\ndocumentation for Web3 Secret Storage.\n- Updated references in `keystore.go` and `passphrase.go` for improved\naccuracy and reliability.\n\n\n---": {
+        "LLM 總結分析": "此提交更新了帳戶密鑰儲存（keystore）和密碼處理相關程式碼中的參考連結，將過時的GitHub Wiki連結替換為官方以太坊的Web3秘密儲存文檔。這有助於提高內部程式碼文件和開發者參考資料的準確性與可靠性，間接提升專案的長期維護性與安全性。",
+        "對幣價的影響": "無明顯影響"
+    },
+    "signer/core/apitypes: require blob txs to have tx.to set (#32197)\n\nCheck the `to` address before building the blob tx.\n\n---------\n\nCo-authored-by: jwasinger <j-wasinger@hotmail.com>": {
+        "LLM 總結分析": "此提交主要涉及加密貨幣協議中的交易驗證。它強制要求「Blob 交易」（可能是指像 EIP-4844 這類數據區塊交易）必須設定一個目標地址 (tx.to)。這項改動旨在提高交易的有效性和安全性，確保所有 blob 交易都有明確的接收方，避免模糊或不完整的交易，從而增強系統的穩定性和可靠性。",
+        "對幣價的影響": "上漲"
+    },
+    "core/rawdb: reduce allocations in rawdb.ReadHeaderNumber (#31913)\n\nThis is something interesting I came across during my benchmarks, we\nspent ~3.8% of all allocations allocating the header number on the heap.\n\n```\n(pprof) list GetHeaderByHash\nTotal: 38197204475\nROUTINE ======================== github.com/ethereum/go-ethereum/core.(*BlockChain).GetHeaderByHash in github.com/ethereum/go-ethereum/core/blockchain_reader.go\n         0 5786566117 (flat, cum) 15.15% of Total\n         .          .     79:func (bc *BlockChain) GetHeaderByHash(hash common.Hash) *types.Header {\n         . 5786566117     80: return bc.hc.GetHeaderByHash(hash)\n         .          .     81:}\n         .          .     82:\n         .          .     83:// GetHeaderByNumber retrieves a block header from the database by number,\n         .          .     84:// caching it (associated with its hash) if found.\n         .          .     85:func (bc *BlockChain) GetHeaderByNumber(number uint64) *types.Header {\nROUTINE ======================== github.com/ethereum/go-ethereum/core.(*HeaderChain).GetHeaderByHash in github.com/ethereum/go-ethereum/core/headerchain.go\n         0 5786566117 (flat, cum) 15.15% of Total\n         .          .    404:func (hc *HeaderChain) GetHeaderByHash(hash common.Hash) *types.Header {\n         . 1471264309    405: number := hc.GetBlockNumber(hash)\n         .          .    406: if number == nil {\n         .          .    407:  return nil\n         .          .    408: }\n         . 4315301808    409: return hc.GetHeader(hash, *number)\n         .          .    410:}\n         .          .    411:\n         .          .    412:// HasHeader checks if a block header is present in the database or not.\n         .          .    413:// In theory, if header is present in the database, all relative components\n         .          .    414:// like td and hash->number should be present too.\n(pprof) list GetBlockNumber\nTotal: 38197204475\nROUTINE ======================== github.com/ethereum/go-ethereum/core.(*HeaderChain).GetBlockNumber in github.com/ethereum/go-ethereum/core/headerchain.go\n  94438817 1471264309 (flat, cum)  3.85% of Total\n         .          .    100:func (hc *HeaderChain) GetBlockNumber(hash common.Hash) *uint64 {\n  94438817   94438817    101: if cached, ok := hc.numberCache.Get(hash); ok {\n         .          .    102:  return &cached\n         .          .    103: }\n         . 1376270828    104: number := rawdb.ReadHeaderNumber(hc.chainDb, hash)\n         .          .    105: if number != nil {\n         .     554664    106:  hc.numberCache.Add(hash, *number)\n         .          .    107: }\n         .          .    108: return number\n         .          .    109:}\n         .          .    110:\n         .          .    111:type headerWriteResult struct {\n(pprof) list ReadHeaderNumber\nTotal: 38197204475\nROUTINE ======================== github.com/ethereum/go-ethereum/core/rawdb.ReadHeaderNumber in github.com/ethereum/go-ethereum/core/rawdb/accessors_chain.go\n 204606513 1376270828 (flat, cum)  3.60% of Total\n         .          .    146:func ReadHeaderNumber(db ethdb.KeyValueReader, hash common.Hash) *uint64 {\n 109577863 1281242178    147: data, _ := db.Get(headerNumberKey(hash))\n         .          .    148: if len(data) != 8 {\n         .          .    149:  return nil\n         .          .    150: }\n  95028650   95028650    151: number := binary.BigEndian.Uint64(data)\n         .          .    152: return &number\n         .          .    153:}\n         .          .    154:\n         .          .    155:// WriteHeaderNumber stores the hash->number mapping.\n         .          .    156:func WriteHeaderNumber(db ethdb.KeyValueWriter, hash common.Hash, number uint64) {\n```\n\nOpening this to discuss the idea, I know that rawdb.EmptyNumber is not a\ngreat name for the variable, open to suggestions": {
+        "LLM 總結分析": "此提交旨在優化以太坊核心客戶端（如 Geth）的性能。根據基準測試結果顯示，`rawdb.ReadHeaderNumber` 函數在執行過程中產生了大量不必要的堆內存分配，約佔總分配量的 3.8%。此次提交的目標是減少這些在頻繁讀取區塊頭號碼操作中的內存分配，以降低垃圾回收的壓力，進而提升客戶端的運行效率、響應速度與資源利用率。這是一個重要的技術性後端優化，有助於提升以太坊網路基礎設施的穩定性和長期可擴展性。",
+        "對幣價的影響": "無明顯影響。"
+    },
+    "all: update dead wiki links (#32215)\n\n---\n\n\n**Description:**  \n- Replaced outdated GitHub wiki links with current, official\ndocumentation URLs.\n- Removed links that redirect or are no longer relevant.\n- Ensured all references point to up-to-date and reliable sources.\n\n\n---": {
+        "LLM 總結分析": "此提交主要針對專案的文件維護，更新並替換了過時或失效的GitHub Wiki連結，確保所有參考資料都指向最新、官方且可靠的來源。這有助於提升資訊準確性與使用者體驗。",
+        "對幣價的影響": "無明顯影響。此為例行性的文件維護工作，旨在優化使用者體驗及資訊準確性，但對加密貨幣的核心功能、技術突破或市場認知無直接且顯著的影響，因此不會對幣價產生明顯波動。"
+    },
+    "eth/protocols/snap, p2p/discover: improve zero time checks (#32214)": {
+        "LLM 總結分析": "此 Commit 訊息顯示專案在 `eth/protocols/snap` 和 `p2p/discover` 這些核心網路協議模組中進行了改進。具體而言，它優化了「零時間檢查」（zero time checks），這通常是指對時間相關的內部驗證或處理機制的改進，旨在提升協議的穩定性、效率和魯棒性。這是一個技術性、底層的優化，有助於提高網路的整體健康度。",
+        "對幣價的影響": "無明顯影響"
+    },
+    "core/rawdb: change the mechanism to schedule freezer sync (#32135)\n\nThis pull request slightly improves the freezer fsync mechanism by scheduling \nthe Sync operation based on the number of uncommitted items and original\ntime interval.\n\nOriginally, freezer.Sync was triggered every 30 seconds, which worked well during\nactive chain synchronization. However, once the initial state sync is complete, \nthe fixed interval causes Sync to be scheduled too frequently.\n\nTo address this, the scheduling logic has been improved to consider both the time \ninterval and the number of uncommitted items. This additional condition helps \navoid unnecessary Sync operations when the chain is idle.": {
+        "LLM 總結分析": "此提交是對核心資料庫同步機制（freezer fsync）的內部優化。它改進了同步操作的排程邏輯，從固定時間間隔觸發改為同時考量未提交項目數量和時間間隔。這解決了區塊鏈在非活躍狀態時，過於頻繁觸發同步的問題，從而減少不必要的磁碟寫入操作，提升整體系統效率和資源利用率。",
+        "對幣價的影響": "無明顯影響"
+    },
+    "triedb/pathdb: introduce file-based state journal (#32060)\n\nIntroduce file-based state journal in path database, fixing\nthe Pebble restriction when the journal size exceeds 4GB.\n\n---------\n\nSigned-off-by: jsvisa <delweng@gmail.com>\nCo-authored-by: Gary Rong <garyrong0905@gmail.com>": {
+        "LLM 總結分析": "這個提交引入了基於檔案的狀態日誌，修復了在 Pebble 資料庫中日誌大小超過 4GB 時的關鍵限制。這是一個重要的底層基礎設施改進，解決了區塊鏈資料庫在處理大規模數據時可能遇到的擴展性瓶頸和穩定性問題。它能有效避免因日誌容量限制導致的潛在崩潰或資料處理問題，顯著提升了系統的可靠性和效能。",
+        "對幣價的影響": "上漲"
+    },
+    "core/types: fix CellProofsAt method (#32198)": {
+        "LLM 總結分析": "此提交修復了核心數據類型中 `CellProofsAt` 方法的一個錯誤。這類修復對於確保系統的數據一致性與穩定性至關重要，它表明開發團隊正在積極維護並提升底層基礎設施的可靠性。",
+        "對幣價的影響": "無明顯影響"
+    },
+    "eth/tracers: apply block header overrides correctly (#32183)\n\nFixes #32175.\n\nThis fixes the scenario where the blockhash opcode would return 0x0\nduring RPC simulations when using BlockOverrides with a future block\nnumber. The root cause was that BlockOverrides.Apply() only modified the\nvm.BlockContext, but GetHashFn() depends on the actual\ntypes.Header.Number to resolve valid historical block hashes. This\ncaused a mismatch and resulted in incorrect behavior during trace and\ncall simulations.\n\n---------\n\nCo-authored-by: shantichanal <158101918+shantichanal@users.noreply.github.com>\nCo-authored-by: lightclient <lightclient@protonmail.com>": {
+        "LLM 總結分析": "此 Git Commit 是一個針對以太坊客戶端（很可能是 Go-Ethereum/Geth）的錯誤修復。它解決了一個關鍵問題，即在使用 `BlockOverrides` 進行 RPC 模擬時，當模擬未來區塊時，`blockhash` 操作碼會錯誤地返回 `0x0`。這個錯誤導致追蹤和調用模擬的結果不正確。修復此問題提升了模擬工具的準確性和可靠性，這對於開發者進行交易預檢、合約分析和安全審計至關重要，屬於基礎開發工具層面的穩定性改進。",
+        "對幣價的影響": "無明顯影響"
+    },
+    "account/abi/bind/v2: fix TestDeploymentWithOverrides (#32212)\n\nThe root cause of the flaky test was a nonce conflict caused by async\ncontract deployments.\n\nThis solution defines a custom deployer with automatic nonce management.": {
+        "LLM 總結分析": "此提交修復了因非同步合約部署導致 Nonce 衝突，進而造成測試不穩定的關鍵問題。Nonce 衝突在區塊鏈中可能導致交易失敗或合約部署錯誤，屬於底層核心的穩定性問題。解決方案是引入自訂部署器並實施自動 Nonce 管理機制，顯著提升了系統的穩定性和可靠性，特別是在處理大量或同時進行的合約部署時。",
+        "對幣價的影響": "上漲"
+    },
+    "eth/downloader: improve nil pointer protection (#32222)\n\nFix #32221\n\n---------\n\nCo-authored-by: rjl493456442 <garyrong0905@gmail.com>": {
+        "LLM 總結分析": "此提交是針對以太坊（eth）專案中下載器（downloader）模組的改進。其主要目的是修復一個錯誤（Fix #32221）並增強空指標保護機制，以提高程式碼的穩定性和可靠性。這是一個技術性的後端維護更新，旨在確保核心功能的順暢運行。",
+        "對幣價的影響": "無明顯影響。這是一個例行性的錯誤修復與穩定性改進，屬於專案正常開發維護的一部分。它對網路的長期健康有益，但由於不涉及新功能、重大協議變更或經濟模型調整，預計不會對幣價產生直接或顯著的短期波動。"
+    },
+    "trie: avoid spawning goroutines for empty children (#32220)": {
+        "LLM 總結分析": "這是對加密貨幣專案核心資料結構『Trie』（前綴樹）的一項優化。它旨在避免為Trie中『空的子節點』不必要地創建或啟動Go語言的輕量級執行緒（goroutines）。這是一個效能改進，可以減少資源消耗，提高系統效率，使系統在處理和儲存資料時更加精簡。",
+        "對幣價的影響": "無明顯影響"
+    },
+    "all: define constructor for BlobSidecar (#32213)\n\nThe main purpose of this change is to enforce the version setting when\nconstructing the blobSidecar, avoiding creating sidecar with wrong/default \nversion tag.": {
+        "LLM 總結分析": "這個提交為 `BlobSidecar` 物件引入了建構子，核心目的是強化其版本設定的強制性。這有助於避免生成帶有錯誤或預設版本標籤的側鏈數據，從而顯著提升系統的數據完整性與運行穩定性。",
+        "對幣價的影響": "無明顯影響"
+    },
+    "triedb/pathdb: improve the performance of parse index block (#32219)\n\nThe implementation of `parseIndexBlock` used a reverse loop with slice\nappends to build the restart points, which was less cache-friendly and\ninvolved unnecessary allocations and operations. In this PR we change\nthe implementation to read and validate the restart points in one single\nforward loop.\n\nHere is the benchmark test:\n\n```bash\ngo test -benchmem -bench=BenchmarkParseIndexBlock ./triedb/pathdb/\n```\n\nThe result as below:\n\n```\nbenchmark                      old ns/op     new ns/op     delta\nBenchmarkParseIndexBlock-8     52.9          37.5          -29.05%\n```\n\nabout 29% improvements\n\n---------\n\nSigned-off-by: jsvisa <delweng@gmail.com>": {
+        "LLM 總結分析": "此提交優化了 `triedb/pathdb` 模組中 `parseIndexBlock` 函數的效能。舊有實作因採用逆向循環與切片追加，導致快取不友善及不必要的記憶體分配。新版本改為單一前向循環處理，顯著提升效率。基準測試顯示，該操作的執行時間縮短了約 29%。這是一項對核心資料讀取操作的重要效能改進，有助於提升系統整體效率與穩定性。",
+        "對幣價的影響": "上漲"
+    },
+    "eth/protocols/snap: fix negative eta in state progress logging (#32225)": {
+        "LLM 總結分析": "該提交修復了在以太坊（或其他相容鏈）的 Snap 同步協議中，進度日誌（logging）顯示估計剩餘時間（ETA，Estimated Time of Arrival）為負數的錯誤。這是一個使用者介面或診斷性錯誤，並不影響協議的核心功能或安全性，但能提升節點操作者監控同步進度的準確性和體驗。",
+        "對幣價的影響": "無明顯影響"
+    },
+    "triedb/pathdb: avoid duplicate metadata reads (#32226)": {
+        "LLM 總結分析": "此提交訊息表明針對 `triedb/pathdb` 模組進行了優化，旨在避免重複讀取元數據。這將有助於提升系統的運行效率和性能，減少不必要的資源消耗。",
+        "對幣價的影響": "無明顯影響"
+    },
+    "core/txpool/blobpool: remove unused `txValidationFn` from BlobPool (#32237)\n\nThis PR removes the now‑unused `txValidationFn` field from BlobPool.\nIt became obsolete after a PR  https://github.com/ethereum/go-ethereum/pull/31202 \nwas merged.\n\nResolves https://github.com/ethereum/go-ethereum/issues/32236": {
+        "LLM 總結分析": "這個提交是一個內部程式碼清理與優化。它移除了 `BlobPool` 中不再使用的 `txValidationFn` 交易驗證函數，該函數因先前的一個程式碼合併而變得冗餘。這顯示開發團隊正積極維護代碼庫的健康度與效率，屬於常規的工程改進。",
+        "對幣價的影響": "無明顯影響"
+    },
+    "params: update tx gas limit cap (#32230)\n\nUpdates the tx gas limit cap to the new parameter (2^24)\nhttps://github.com/ethereum/EIPs/pull/9986/files": {
+        "LLM 總結分析": "此提交訊息顯示專案更新了「交易瓦斯上限」（tx gas limit cap），將其設定為一個顯著提高的數值（2^24，即 16,777,216）。這通常意味著該區塊鏈的單一區塊可以容納更多的交易或更複雜的智能合約操作。此舉旨在提高網絡的吞吐量和可擴展性，潛在改善用戶體驗並降低交易費用。",
+        "對幣價的影響": "上漲"
+    }
+}

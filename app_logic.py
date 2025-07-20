@@ -22,11 +22,25 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
                             apply_commission_to_plot, enable_dynamic_updates, progress=gr.Progress(track_tqdm=True)):
     print("DEBUG: analyze_crypto_activity function entered.")
     # Capture stdout/stderr
+    # Custom class to tee output to both StringIO and original stdout/stderr
+    class DualOutput:
+        def __init__(self, file1, file2):
+            self.file1 = file1
+            self.file2 = file2
+
+        def write(self, s):
+            self.file1.write(s)
+            self.file2.write(s)
+
+        def flush(self):
+            self.file1.flush()
+            self.file2.flush()
+
     old_stdout = sys.stdout
     old_stderr = sys.stderr
-    redirected_output = io.StringIO()
-    sys.stdout = redirected_output
-    sys.stderr = redirected_output
+    redirected_output_capture = io.StringIO()
+    sys.stdout = DualOutput(redirected_output_capture, old_stdout)
+    sys.stderr = DualOutput(redirected_output_capture, old_stderr)
 
     try:
         progress(0, desc="Initializing and fetching data...")
@@ -52,7 +66,7 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
         print(f"DEBUG: Fetched {len(commit_df)} GitHub commit data points.")
 
         if price_series.empty or commit_df.empty:
-                yield None, None, "Error: Could not fetch necessary data.", "Analysis failed.", redirected_output.getvalue()
+                yield None, None, "Error: Could not fetch necessary data.", "Analysis failed.", redirected_output_capture.getvalue()
                 return
 
         floored_start_date = start_dt.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -130,7 +144,7 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
             fig2.tight_layout()
 
             performance_text = "\n".join([f"{k}: {v}" for k, v in performance_metrics.items()])        
-            return fig1, fig2, performance_text, performance_metrics.get("Status", "Running..."), redirected_output.getvalue(), trades_info_formatted
+            return fig1, fig2, performance_text, performance_metrics.get("Status", "Running..."), redirected_output_capture.getvalue(), trades_info_formatted
 
         # Generate signals for each selected strategy
         all_strategy_signals = pd.DataFrame(index=price_series_aligned.index)
