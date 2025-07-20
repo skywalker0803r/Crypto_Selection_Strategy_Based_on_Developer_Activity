@@ -70,7 +70,7 @@ with gr.Blocks() as demo:
             gr.Markdown("### Strategy Backtesting Settings")
             strategy_choice = gr.CheckboxGroup(
                 label="Select Backtesting Strategy(ies)",
-                choices=["No Strategy", "Simple Commit Threshold Strategy", "Commit SMA Strategy", "LLM Commit Analysis Strategy"], 
+                choices=["No Strategy", "Simple Commit Threshold Strategy", "Commit SMA Strategy", "LLM Commit Analysis Strategy", "Simple SMA Strategy"], 
                 value=["No Strategy"], # Default to No Strategy
                 interactive=True
             )
@@ -128,6 +128,20 @@ with gr.Blocks() as demo:
                 interactive=True, 
                 visible=False
             )
+            sma1_period_input = gr.Number(
+                label="SMA1 Period (shorter)",
+                value=10,
+                info="Period (days) for the shorter Simple Moving Average",
+                interactive=True,
+                visible=False
+            )
+            sma2_period_input = gr.Number(
+                label="SMA2 Period (longer)",
+                value=30,
+                info="Period (days) for the longer Simple Moving Average",
+                interactive=True,
+                visible=False
+            )
 
             apply_commission_checkbox = gr.Checkbox(
                 label="Apply Commissions to Strategy Return Curve",
@@ -182,6 +196,10 @@ with gr.Blocks() as demo:
         outputs=[manual_coingecko_id, manual_github_owner, manual_github_repo]
     )
 
+    # Add change event handlers for date pickers to ensure UI updates
+    start_date_picker.change(lambda x: x, inputs=start_date_picker, outputs=start_date_picker)
+    end_date_picker.change(lambda x: x, inputs=end_date_picker, outputs=end_date_picker)
+
     # Function to toggle visibility of strategy parameters
     def toggle_strategy_params_visibility(strategy_choice_values):
         buy_thresh_vis = False
@@ -190,6 +208,7 @@ with gr.Blocks() as demo:
         long_sma_vis = False
         buy_score_vis = False
         sell_score_vis = False
+        sma_periods_vis = False
 
         for strategy_choice_value in strategy_choice_values:
             if strategy_choice_value == "Simple Commit Threshold Strategy":
@@ -201,18 +220,22 @@ with gr.Blocks() as demo:
             elif strategy_choice_value == "LLM Commit Analysis Strategy":
                 buy_score_vis = True
                 sell_score_vis = True
+            elif strategy_choice_value == "Simple SMA Strategy":
+                sma_periods_vis = True
         
         return (gr.update(visible=buy_thresh_vis), 
                 gr.update(visible=sell_thresh_vis), 
                 gr.update(visible=short_sma_vis), 
                 gr.update(visible=long_sma_vis),
                 gr.update(visible=buy_score_vis),
-                gr.update(visible=sell_score_vis))
+                gr.update(visible=sell_score_vis),
+                gr.update(visible=sma_periods_vis),
+                gr.update(visible=sma_periods_vis))
 
     strategy_choice.change(
         toggle_strategy_params_visibility,
         inputs=strategy_choice,
-        outputs=[buy_threshold_input, sell_threshold_input, short_sma_period_input, long_sma_period_input, buy_score_threshold_input, sell_score_threshold_input]
+        outputs=[buy_threshold_input, sell_threshold_input, short_sma_period_input, long_sma_period_input, buy_score_threshold_input, sell_score_threshold_input, sma1_period_input, sma2_period_input]
     )
 
     analyze_button.click(
@@ -223,6 +246,7 @@ with gr.Blocks() as demo:
             strategy_choice, buy_logic, sell_logic, buy_threshold_input, sell_threshold_input, 
             short_sma_period_input, long_sma_period_input,
             buy_score_threshold_input, sell_score_threshold_input,
+            sma1_period_input, sma2_period_input,
             apply_commission_checkbox,
             dynamic_updates_checkbox
         ],

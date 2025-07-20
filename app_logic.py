@@ -8,13 +8,17 @@ import sys
 import config
 from data_fetcher import get_crypto_prices, get_github_commits
 from strategies import simple_commit_threshold_strategy, commit_sma_strategy, llm_strategy_generator
+from strategies.simple_sma_strategy import simple_sma_strategy
+from strategies.simple_sma_strategy import simple_sma_strategy
 from backtester import run_backtest
+from strategies.simple_sma_strategy import simple_sma_strategy
 
 def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owner, manual_repo, 
                             start_date_input, end_date_input, 
                             strategy_choice, buy_logic, sell_logic, buy_threshold_input, sell_threshold_input,
                             short_sma_period_input, long_sma_period_input,
                             buy_score_threshold_input, sell_score_threshold_input,
+                            sma1_period_input, sma2_period_input,
                             apply_commission_to_plot, enable_dynamic_updates, progress=gr.Progress(track_tqdm=True)):
     print("DEBUG: analyze_crypto_activity function entered.")
     # Capture stdout/stderr
@@ -26,8 +30,12 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
 
     try:
         progress(0, desc="Initializing and fetching data...")
+        print(f"DEBUG: Received start_date_input: {start_date_input}, type: {type(start_date_input)}")
+        print(f"DEBUG: Received end_date_input: {end_date_input}, type: {type(end_date_input)}")
+
         start_dt = start_date_input if start_date_input is not None else datetime.now() - timedelta(days=config.DEFAULT_DAYS)
         end_dt = end_date_input if end_date_input is not None else datetime.now()
+        print(f"DEBUG: Using start_dt: {start_dt}, end_dt: {end_dt}")
 
         binance_symbol_to_use, github_owner_to_use, github_repo_to_use = "", "", ""
         if crypto_selection == "Manual GitHub Repo & Binance Symbol":
@@ -154,6 +162,9 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
                         all_strategy_signals["LLM Commit Analysis Strategy"] = llm_signals.reindex(price_series_aligned.index, fill_value=0)
                     else:
                         all_strategy_signals["LLM Commit Analysis Strategy"] = pd.Series(0, index=price_series_aligned.index, dtype=int)
+                elif strategy == "Simple SMA Strategy":
+                    signals = simple_sma_strategy(price_series_aligned, sma1_period_input, sma2_period_input)
+                    all_strategy_signals["Simple SMA Strategy"] = signals
 
             # Combine signals based on selected logic
             final_strategy_signals = combine_strategy_signals(all_strategy_signals, buy_logic, sell_logic)
