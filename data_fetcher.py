@@ -3,85 +3,117 @@ import pandas as pd
 from datetime import datetime, timedelta
 import time
 
-def get_coingecko_id_list(top_n, currency, predefined_cryptos):
+def get_binance_trading_pairs(top_n, currency, predefined_cryptos):
     """
-    Fetches a list of top N cryptocurrency IDs by market capitalization from CoinGecko API,
+    Fetches a list of top N cryptocurrency trading pairs from Binance API,
     excluding those already present in PREDEFINED_CRYPTOS.
     """
-    print(f"--- Fetching top {top_n} cryptocurrency IDs from CoinGecko (excluding predefined) ---")
-    url = f"https://api.coingecko.com/api/v3/coins/markets"
-    params = {
-        "vs_currency": currency,
-        "order": "market_cap_desc",
-        "per_page": min(top_n + len(predefined_cryptos) * 2, 250),
-        "page": 1
-    }
-    print(f"DEBUG(CoinGecko API): Request URL: {url}")
-    print(f"DEBUG(CoinGecko API): Request Params: {params}")
-
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        
-        predefined_ids = set(predefined_cryptos.keys())
-        filtered_ids = []
-        for coin in data:
-            if coin['id'] not in predefined_ids:
-                filtered_ids.append(coin['id'])
-            if len(filtered_ids) >= top_n:
-                break
-        
-        filtered_ids.sort()
-        print(f"Successfully fetched {len(filtered_ids)} CoinGecko IDs (top {top_n} excluding predefined).")
-        return filtered_ids
-    except requests.exceptions.RequestException as e:
-        error_message = f"Error: Failed to fetch CoinGecko ID list: {e}"
-        if 'response' in locals() and hasattr(response, 'text'):
-            error_message += f"\nResponse content: {response.text}"
-        print(error_message)
-        return []
-
-def get_crypto_prices(crypto_id, currency, start_date, end_date):
-    print(f"\n--- Starting to fetch {crypto_id.upper()} price data ({currency.upper()}) ---")
-    start_timestamp = int(start_date.timestamp())
-    end_timestamp = int(end_date.timestamp())
-    url = f"https://api.coingecko.com/api/v3/coins/{crypto_id}/market_chart/range?vs_currency={currency}&from={start_timestamp}&to={end_timestamp}"
-    print(f"DEBUG(Price API): Request URL: {url}")
+    print(f"--- Fetching top {top_n} cryptocurrency trading pairs from Binance (excluding predefined) ---")
+    url = "https://api.binance.com/api/v3/exchangeInfo"
 
     try:
         response = requests.get(url)
         response.raise_for_status()
         data = response.json()
+        
+        predefined_symbols = set(predefined_cryptos.keys())
+        filtered_symbols = []
+        
+        # Filter for USDT pairs and sort by volume (Binance API doesn't provide market cap directly)
+        # This is a simplified approach; a more robust solution might involve fetching 24hr ticker data
+        # to get actual volumes and then sorting. For now, we'll just get all USDT pairs.
+        
+        usdt_pairs = [s['symbol'] for s in data['symbols'] if s['quoteAsset'] == currency.upper() and s['status'] == 'TRADING']
+        
+        for symbol in usdt_pairs:
+            if symbol not in predefined_symbols:
+                filtered_symbols.append(symbol)
+            if len(filtered_symbols) >= top_n:
+                break
+        
+        filtered_symbols.sort()
+        print(f"Successfully fetched {len(filtered_symbols)} Binance trading pairs (top {top_n} excluding predefined).")
+        return filtered_symbols
+    except requests.exceptions.RequestException as e:
+        error_message = f"Error: Failed to fetch Binance trading pairs: {e}"
+        if 'response' in locals() and hasattr(response, 'text'):
+            error_message += f"\nResponse content: {response.text}"
+        print(error_message)
+        return []
 
-        if not data or 'prices' not in data or not data['prices']:
-            print(f"Warning: No price data fetched for {crypto_id.upper()} from CoinGecko. Check CoinGecko ID or date range.")
+def get_crypto_prices(symbol, currency, start_date, end_date):
+    print(f"\n--- Starting to fetch {symbol.upper()} price data ({currency.upper()}) ---")
+    
+    # Binance API expects milliseconds for timestamps
+    start_timestamp_ms = int(start_date.timestamp() * 1000)
+    end_timestamp_ms = int(end_date.timestamp() * 1000)
+
+    # Binance API endpoint for historical klines (candlestick data)
+    url = "https://api.binance.com/api/v3/klines"
+    
+    # Interval for daily data
+    interval = "1d" 
+    
+    params = {
+        "symbol": symbol.upper(),
+        "interval": interval,
+        "startTime": start_timestamp_ms,
+        "endTime": end_timestamp_ms,
+        "limit": 1000 # Max 1000 data points per request
+    }
+    print(f"DEBUG(Price API): Request URL: {url}")
+    print(f"DEBUG(Price API): Request Params: {params}")
+
+    all_klines = []
+    while True:
+        try:
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            klines = response.json()
+
+            if not klines:
+                break
+            
+            all_klines.extend(klines)
+            
+            # If we received less than the limit, it means we've fetched all data
+            if len(klines) < params["limit"]:
+                break
+            
+            # For the next request, start from the end of the last fetched data point
+            params["startTime"] = klines[-1][0] + 1 # Add 1 millisecond to avoid duplicate
+            
+            time.sleep(0.1) # Be kind to the API
+            
+        except requests.exceptions.HTTPError as e:
+            print(f"Error: HTTP error occurred while fetching {symbol.upper()} price: {e} (Status code: {response.status_code if 'response' in locals() else 'N/A'})")
+            return pd.Series(dtype='float64')
+        except requests.exceptions.RequestException as e:
+            print(f"Error: Failed to connect to Binance API: {e}")
+            return pd.Series(dtype='float64')
+        except Exception as e:
+            print(f"Error: An unknown error occurred while fetching {symbol.upper()} price: {e}")
             return pd.Series(dtype='float64')
 
-        prices = []
-        for price_data in data['prices']:
-            timestamp, price = price_data
-            prices.append({'date': datetime.fromtimestamp(timestamp / 1000), 'price': price})
+    if not all_klines:
+        print(f"Warning: No price data fetched for {symbol.upper()} from Binance. Check symbol or date range.")
+        return pd.Series(dtype='float64')
 
-        df = pd.DataFrame(prices)
-        df['date'] = pd.to_datetime(df['date']).dt.floor('D')
-        
-        # Group by date and calculate the mean price to handle duplicates
-        daily_prices = df.groupby('date')['price'].mean()
-        
-        daily_prices = daily_prices.sort_index()
-        print(f"Successfully fetched and consolidated {len(df)} price data points into {len(daily_prices)} daily prices.")
-        return daily_prices
+    prices = []
+    for kline in all_klines:
+        timestamp_ms = kline[0]
+        close_price = float(kline[4]) # Close price is at index 4
+        prices.append({'date': datetime.fromtimestamp(timestamp_ms / 1000), 'price': close_price})
 
-    except requests.exceptions.HTTPError as e:
-        print(f"Error: HTTP error occurred while fetching {crypto_id.upper()} price: {e} (Status code: {response.status_code if 'response' in locals() else 'N/A'})")
-        return pd.Series(dtype='float64')
-    except requests.exceptions.RequestException as e:
-        print(f"Error: Failed to connect to CoinGecko API: {e}")
-        return pd.Series(dtype='float64')
-    except Exception as e:
-        print(f"Error: An unknown error occurred while fetching {crypto_id.upper()} price: {e}")
-        return pd.Series(dtype='float64')
+    df = pd.DataFrame(prices)
+    df['date'] = pd.to_datetime(df['date']).dt.floor('D')
+    
+    # Group by date and calculate the mean price to handle duplicates (though 1d interval should prevent this)
+    daily_prices = df.groupby('date')['price'].mean()
+    
+    daily_prices = daily_prices.sort_index()
+    print(f"Successfully fetched and consolidated {len(df)} price data points into {len(daily_prices)} daily prices.")
+    return daily_prices
 
 def get_github_commits(owner, repo, start_date, end_date, headers):
     print(f"\n--- Starting to fetch GitHub Commit data for {owner}/{repo} ---")

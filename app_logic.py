@@ -10,7 +10,7 @@ from data_fetcher import get_crypto_prices, get_github_commits
 from strategies import simple_commit_threshold_strategy, commit_sma_strategy, llm_strategy_generator
 from backtester import run_backtest
 
-def analyze_crypto_activity(crypto_selection, manual_coingecko_id, manual_owner, manual_repo, 
+def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owner, manual_repo, 
                             start_date_input, end_date_input, 
                             strategy_choice, buy_logic, sell_logic, buy_threshold_input, sell_threshold_input,
                             short_sma_period_input, long_sma_period_input,
@@ -29,17 +29,19 @@ def analyze_crypto_activity(crypto_selection, manual_coingecko_id, manual_owner,
         start_dt = start_date_input if start_date_input is not None else datetime.now() - timedelta(days=config.DEFAULT_DAYS)
         end_dt = end_date_input if end_date_input is not None else datetime.now()
 
-        coingecko_id_to_use, github_owner_to_use, github_repo_to_use = "", "", ""
-        if crypto_selection == "Manual GitHub Repo & CoinGecko ID":
-            coingecko_id_to_use, github_owner_to_use, github_repo_to_use = manual_coingecko_id, manual_owner, manual_repo
+        binance_symbol_to_use, github_owner_to_use, github_repo_to_use = "", "", ""
+        if crypto_selection == "Manual GitHub Repo & Binance Symbol":
+            binance_symbol_to_use, github_owner_to_use, github_repo_to_use = manual_binance_symbol, manual_owner, manual_repo
         elif crypto_selection in config.PREDEFINED_CRYPTOS:
             crypto_info = config.PREDEFINED_CRYPTOS[crypto_selection]
-            coingecko_id_to_use, github_owner_to_use, github_repo_to_use = crypto_info["coingecko_id"], crypto_info["github_owner"], crypto_info["github_repo"]
+            binance_symbol_to_use, github_owner_to_use, github_repo_to_use = crypto_info["binance_symbol"], crypto_info["github_owner"], crypto_info["github_repo"]
         else:
-            coingecko_id_to_use, github_owner_to_use, github_repo_to_use = crypto_selection, manual_owner, manual_repo
+            binance_symbol_to_use, github_owner_to_use, github_repo_to_use = crypto_selection, manual_owner, manual_repo
 
-        price_series = get_crypto_prices(coingecko_id_to_use, config.DEFAULT_CRYPTO_CURRENCY, start_dt, end_dt)
+        price_series = get_crypto_prices(binance_symbol_to_use, config.DEFAULT_CRYPTO_CURRENCY, start_dt, end_dt)
+        print(f"DEBUG: Fetched {len(price_series)} days of price data.")
         commit_df = get_github_commits(github_owner_to_use, github_repo_to_use, start_dt, end_dt, config.headers)
+        print(f"DEBUG: Fetched {len(commit_df)} GitHub commit data points.")
 
         if price_series.empty or commit_df.empty:
                 yield None, None, "Error: Could not fetch necessary data.", "Analysis failed.", redirected_output.getvalue()
@@ -48,8 +50,11 @@ def analyze_crypto_activity(crypto_selection, manual_coingecko_id, manual_owner,
         floored_start_date = start_dt.replace(hour=0, minute=0, second=0, microsecond=0)
         floored_end_date = end_dt.replace(hour=0, minute=0, second=0, microsecond=0)
         full_date_range = pd.date_range(start=floored_start_date, end=floored_end_date, freq='D')
+        print(f"DEBUG: Full date range for analysis: {floored_start_date.strftime('%Y-%m-%d')} to {floored_end_date.strftime('%Y-%m-%d')} ({len(full_date_range)} days).")
         commit_counts_for_plot = commit_df.groupby(commit_df['date'].dt.date).size().reindex(full_date_range.date, fill_value=0)
+        print(f"DEBUG: Daily commit counts prepared for plotting. Total days with commits: {len(commit_counts_for_plot[commit_counts_for_plot > 0])}.")
         price_series_aligned = price_series.reindex(full_date_range).dropna()
+        print(f"DEBUG: Price series aligned to full date range. Remaining data points: {len(price_series_aligned)}.")
 
         # New function to combine strategy signals
         def combine_strategy_signals(all_signals, buy_logic, sell_logic):

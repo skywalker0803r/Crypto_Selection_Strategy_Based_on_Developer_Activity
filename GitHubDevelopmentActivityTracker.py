@@ -2,19 +2,19 @@ import gradio as gr
 from datetime import datetime, timedelta
 
 import config
-from data_fetcher import get_coingecko_id_list
+from data_fetcher import get_binance_trading_pairs
 from app_logic import analyze_crypto_activity
 
 # --- UI Initialization ---
 
 # Fetch the dynamic list once when the script starts
-DYNAMIC_COINGECKO_IDS = get_coingecko_id_list(100, config.DEFAULT_CRYPTO_CURRENCY, config.PREDEFINED_CRYPTOS)
+DYNAMIC_BINANCE_SYMBOLS = get_binance_trading_pairs(100, config.DEFAULT_CRYPTO_CURRENCY, config.PREDEFINED_CRYPTOS)
 
 # Construct the final list for the dropdown: PREDEFINED + DYNAMIC + Manual Option
-ALL_DROPDOWN_CHOICES = list(config.PREDEFINED_CRYPTOS.keys()) + DYNAMIC_COINGECKO_IDS + ["Manual GitHub Repo & CoinGecko ID"]
+ALL_DROPDOWN_CHOICES = list(config.PREDEFINED_CRYPTOS.keys()) + DYNAMIC_BINANCE_SYMBOLS + ["Manual GitHub Repo & Binance Symbol"]
 # Fallback if ALL_DROPDOWN_CHOICES becomes empty unexpectedly
 if not ALL_DROPDOWN_CHOICES:
-    ALL_DROPDOWN_CHOICES = ["bitcoin", "ethereum", "solana", "Manual GitHub Repo & CoinGecko ID"]
+    ALL_DROPDOWN_CHOICES = ["bitcoin", "ethereum", "solana", "Manual GitHub Repo & Binance Symbol"]
     print("Warning: Dropdown choices are empty, using default fallback list.")
 
 
@@ -37,8 +37,8 @@ with gr.Blocks() as demo:
                 interactive=True
             )
             manual_coingecko_id = gr.Textbox(
-                label="Manual CoinGecko ID (e.g., dogecoin)",
-                placeholder="Enter CoinGecko ID",
+                label="Manual Binance Symbol (e.g., DOGEUSDT)",
+                placeholder="Enter Binance Symbol",
                 interactive=True,
                 visible=False # Default hidden
             )
@@ -162,13 +162,13 @@ with gr.Blocks() as demo:
 
     # Function to toggle visibility of manual input fields and pre-fill if predefined
     def toggle_manual_input_visibility_and_fill(choice):
-        if choice == "Manual GitHub Repo & CoinGecko ID":
+        if choice == "Manual GitHub Repo & Binance Symbol":
             return (gr.update(visible=True, value=""),
                     gr.update(visible=True, value=""),
                     gr.update(visible=True, value=""))
         elif choice in config.PREDEFINED_CRYPTOS:
             crypto_info = config.PREDEFINED_CRYPTOS[choice]
-            return (gr.update(visible=False, value=crypto_info["coingecko_id"]), 
+            return (gr.update(visible=False, value=crypto_info["binance_symbol"]), 
                     gr.update(visible=False, value=crypto_info["github_owner"]),
                     gr.update(visible=False, value=crypto_info["github_repo"]))
         else: 

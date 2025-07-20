@@ -8,11 +8,11 @@ COMMISSION_RATE = 0.001 # Transaction commission rate, e.g., 0.1%
 
 # Retaining PREDEFINED_CRYPTOS as requested
 PREDEFINED_CRYPTOS = {
-    "ethereum": {"coingecko_id": "ethereum", "github_owner": "ethereum", "github_repo": "go-ethereum"},
-    "bitcoin": {"coingecko_id": "bitcoin", "github_owner": "bitcoin", "github_repo": "bitcoin"},
-    "solana": {"coingecko_id": "solana", "github_owner": "solana-labs", "github_repo": "solana"},
-    "polkadot": {"coingecko_id": "polkadot", "github_owner": "paritytech", "github_repo": "polkadot-sdk"},
-    "cardano": {"coingecko_id": "cardano", "github_owner": "input-output-hk", "github_repo": "cardano-node"},
+    "ethereum": {"binance_symbol": "ETHUSDT", "github_owner": "ethereum", "github_repo": "go-ethereum"},
+    "bitcoin": {"binance_symbol": "BTCUSDT", "github_owner": "bitcoin", "github_repo": "bitcoin"},
+    "solana": {"binance_symbol": "SOLUSDT", "github_owner": "solana-labs", "github_repo": "solana"},
+    "polkadot": {"binance_symbol": "DOTUSDT", "github_owner": "paritytech", "github_repo": "polkadot-sdk"},
+    "cardano": {"binance_symbol": "ADAUSDT", "github_owner": "input-output-hk", "github_repo": "cardano-node"},
 }
 
 from dotenv import load_dotenv
