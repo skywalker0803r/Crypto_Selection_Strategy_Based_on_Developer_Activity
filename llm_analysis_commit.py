@@ -19,6 +19,18 @@ HEADERS = {"Authorization": f"token {TOKEN}"} if TOKEN else {}
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 print(f"GEMINI_API_KEY : {GEMINI_API_KEY}")
 
+def initialize_gemini(api_key):
+    """Initializes the Gemini API."""
+    try:
+        genai.configure(api_key=api_key)
+        print(f'api_key:{api_key}')
+        print("Gemini API initialized successfully.")
+    except Exception as e:
+        print(f"Gemini API initialization failed: {e}")
+        exit()
+
+initialize_gemini(GEMINI_API_KEY)
+
 # --- Cache Management ---
 def load_cache():
     """Loads the analysis cache from a JSON file."""
@@ -40,7 +52,6 @@ def save_cache(cache_data):
 
 # --- LLM Analysis with Cache ---
 def get_llm_analysis(commit_message, max_retries=3, initial_backoff=5):
-    initialize_gemini(GEMINI_API_KEY)
     """
     Analyzes a commit message using Gemini LLM, with caching and retry mechanisms.
     """
@@ -54,7 +65,7 @@ def get_llm_analysis(commit_message, max_retries=3, initial_backoff=5):
     
     retries = 0
     backoff_time = initial_backoff
-    max_retries = 99999
+    max_retries = 5
     while retries < max_retries:
         try:
             model = genai.GenerativeModel('gemini-2.5-flash')

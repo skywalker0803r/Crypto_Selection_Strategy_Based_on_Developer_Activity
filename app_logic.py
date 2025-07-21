@@ -129,6 +129,7 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
                     f"{trade.get('當前總報酬率%數', 0):.2f}%"
                 ])
 
+            plt.close('all') # Close all existing figures to prevent memory issues
             fig1, ax1 = plt.subplots(figsize=(14, 8))
             ax1.plot(price_series_aligned.index, price_series_aligned.values, color='tab:blue', label='Price Trend')
             ax1.scatter([p['date'] for p in buy_points], [p['price'] for p in buy_points], marker='^', s=100, color='green', label='Buy Point', zorder=5)
@@ -171,6 +172,7 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
                     llm_signals = None
                     for _, _, _, _, _, signals_only in llm_signals_generator:
                         llm_signals = signals_only # The last yield will contain the full signals
+                    print(f"DEBUG: LLM signals consumed. Length: {len(llm_signals) if llm_signals is not None else 0}")
                     
                     if llm_signals is not None:
                         all_strategy_signals["LLM Commit Analysis Strategy"] = llm_signals.reindex(price_series_aligned.index, fill_value=0)
@@ -181,19 +183,29 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
                     all_strategy_signals["Simple SMA Strategy"] = signals
 
             # Combine signals based on selected logic
+            print("DEBUG: Combining strategy signals...")
             final_strategy_signals = combine_strategy_signals(all_strategy_signals, buy_logic, sell_logic)
+            print(f"DEBUG: Combined strategy signals. Length: {len(final_strategy_signals)}")
 
+            print("DEBUG: Running backtest...")
             backtest_generator = run_backtest(price_series_aligned, final_strategy_signals, config.INITIAL_CAPITAL, config.COMMISSION_RATE, config.DEFAULT_CRYPTO_CURRENCY)
+            print("DEBUG: Backtest generator created.")
 
             if enable_dynamic_updates:
+                print("DEBUG: Dynamic updates enabled. Iterating through backtest generator...")
                 for i, results in enumerate(backtest_generator):
                     progress(0.5 + (i / len(price_series_aligned) * 0.5), desc=results[4].get("Status", "Backtesting..."))
+                    print(f"DEBUG: Yielding UI output for dynamic update (day {i+1})...")
                     yield generate_ui_output(results)
+                print("DEBUG: Finished iterating through backtest generator for dynamic updates.")
             else:
+                print("DEBUG: Dynamic updates disabled. Running full backtest...")
                 progress(0.5, desc="Running backtest...")
                 final_results = list(backtest_generator)[-1]
+                print("DEBUG: Full backtest completed. Generating final charts...")
                 progress(1.0, desc="Generating final charts...")
                 yield generate_ui_output(final_results)
+                print("DEBUG: Yielded final UI output.")
     finally:
         sys.stdout = old_stdout
         sys.stderr = old_stderr

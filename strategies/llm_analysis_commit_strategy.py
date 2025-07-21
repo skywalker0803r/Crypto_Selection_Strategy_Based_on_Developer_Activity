@@ -21,6 +21,7 @@ def llm_strategy_generator(commit_df, price_series, buy_score_threshold, sell_sc
     signals_series = pd.Series(0, index=price_series.index, dtype=int)
 
     # --- Main Loop: Iterate through each day in the price series ---
+    print("DEBUG: Starting main loop through price series.")
     total_days = len(price_series)
     total_commit_number = len(commit_df)
     print(f"total commit number:{total_commit_number}")
@@ -30,21 +31,28 @@ def llm_strategy_generator(commit_df, price_series, buy_score_threshold, sell_sc
             progress(i / total_days, desc=f"Analyzing & Backtesting Day {i + 1}/{total_days}")
 
         # 1. Analyze commits for the current day
+        print(f"DEBUG: Processing commits for date: {current_date.date()}")
         todays_commits = commit_df[commit_df['date'].dt.date == current_date.date()]
         daily_score = 0
         if not todays_commits.empty:
+            print(f"DEBUG: Found {len(todays_commits)} commits for {current_date.date()}")
             for _, (_, row) in enumerate(todays_commits.iterrows()):
                 print(f"commit 處理進度:{count}/{total_commit_number}")
-                analysis_result = get_llm_analysis(row['message'])
+                commit_message = row['message']
+                print(f"DEBUG: Calling get_llm_analysis for commit: {commit_message[:100]}...")
+                analysis_result = get_llm_analysis(commit_message)
+                print(f"DEBUG: LLM analysis result: {analysis_result}")
                 impact = analysis_result.get("對幣價的影響", "無明顯影響")
                 if "上漲" in impact:
                     daily_score += 1
                 elif "下跌" in impact:
                     daily_score -= 1
-                time.sleep(0.5) # Small delay between individual API calls
+                print(f"DEBUG: Daily score updated to: {daily_score}")
+                # Removed time.sleep(0.5) for efficiency, as caching handles repeated calls.
                 count += 1
 
         # 2. Generate signal for the current day
+        print(f"DEBUG: Generating signal for {current_date.date()}. Current daily_score: {daily_score}")
         signal = 0
         if holding_shares == 0: # If not holding, check for buy signal
             if daily_score >= buy_score_threshold:
@@ -52,6 +60,7 @@ def llm_strategy_generator(commit_df, price_series, buy_score_threshold, sell_sc
         else: # If holding, check for sell signal
             if daily_score <= sell_score_threshold:
                 signal = -1
+        print(f"DEBUG: Generated signal: {signal}")
 
         signals_series.loc[current_date] = signal
 
@@ -159,5 +168,7 @@ def llm_strategy_generator(commit_df, price_series, buy_score_threshold, sell_sc
         
         yield cumulative_returns, buy_and_hold_returns, buy_points, sell_points, performance_metrics, trades_info
     
+    print("DEBUG: Main loop finished.")
     if return_signals_only:
+        print("DEBUG: Yielding signals_series as return_signals_only is True.")
         yield None, None, None, None, None, signals_series

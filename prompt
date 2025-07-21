@@ -1,0 +1,23 @@
+Gemini API initialized successfully.
+(Cache Hit) for commit: core/txpool/blobpool: remove unused `txValidationFn` from BlobPool (#3...
+commit 處理進度:844/850
+api_key:AIzaSyDsSAYG-DqdhQ9Q7oV0tCe6Jh-00BA1bIc
+Gemini API initialized successfully.
+(Cache Hit) for commit: params: update tx gas limit cap (#32230)
+
+Updates the tx gas limit cap...
+commit 處理進度:845/850
+api_key:AIzaSyDsSAYG-DqdhQ9Q7oV0tCe6Jh-00BA1bIc
+Gemini API initialized successfully.
+(Cache Hit) for commit: triedb/pathdb: fix incorrect address length in history searching (#322...
+
+不知道怎麼了他卡在這裡就部會動了
+
+(Cache Hit) for commit: core/txpool/blobpool: remove unused `txValidationFn` from BlobPool (#3...
+commit 處理進度:844/850
+(Cache Hit) for commit: params: update tx gas limit cap (#32230)
+
+Updates the tx gas limit cap...
+commit 處理進度:845/850
+(Cache Hit) for commit: triedb/pathdb: fix incorrect address length in history searching (#322...
+你要加入更多debug訊息看看卡在這裡的原因
