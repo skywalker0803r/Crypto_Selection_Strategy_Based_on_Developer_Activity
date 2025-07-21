@@ -51,18 +51,14 @@ def save_cache(cache_data):
         print(f"Error saving cache: {e}")
 
 # --- LLM Analysis with Cache ---
-def get_llm_analysis(commit_message, max_retries=3, initial_backoff=5):
+def get_llm_analysis(commit_message, cache, max_retries=3, initial_backoff=5):
     """
     Analyzes a commit message using Gemini LLM, with caching and retry mechanisms.
+    Takes the cache dictionary as an argument.
     """
-    cache = load_cache()
-    
     if commit_message in cache:
-        print(f"(Cache Hit) for commit: {commit_message[:70]}...")
         return cache[commit_message]
 
-    print(f"(Cache Miss) Analyzing commit: {commit_message[:70]}...")
-    
     retries = 0
     backoff_time = initial_backoff
     max_retries = 5
@@ -84,34 +80,24 @@ def get_llm_analysis(commit_message, max_retries=3, initial_backoff=5):
             Commit 訊息：
             {commit_message}
             """
-            print("在呼叫llm api 先延遲1秒避免被限流")
             time.sleep(1)
             response = model.generate_content(prompt)
             
-
             json_str = response.text.replace("```json", "").replace("```", "").strip()
             analysis_result = json.loads(json_str)
-            print(f"分析結果:{analysis_result}")
             
-            # --- Immediate Save to Cache ---
             cache[commit_message] = analysis_result
-            save_cache(cache)
-            # --------------------------------
-            
             return analysis_result
 
         except Exception as e:
             if "429" in str(e) or "ResourceExhausted" in str(e):
                 retries += 1
                 if retries < max_retries:
-                    print(f"Warning: Rate limit hit. Retrying in {backoff_time}s... ({retries}/{max_retries})")
                     time.sleep(backoff_time)
                     backoff_time *= 2
                 else:
-                    print(f"Error: Max retries reached. Failing this commit.")
                     return {"LLM 總結分析": "分析失敗 (速率限制)", "對幣價的影響": "未知"}
             else:
-                print(f"Error during LLM analysis: {e}")
                 return {"LLM 總結分析": "分析失敗 (未知錯誤)", "對幣價的影響": "未知"}
 
     return {"LLM 總結分析": "分析失敗 (最終)", "對幣價的影響": "未知"}

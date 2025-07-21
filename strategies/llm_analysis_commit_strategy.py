@@ -1,6 +1,6 @@
 import pandas as pd
 import time
-from llm_analysis_commit import get_llm_analysis
+from llm_analysis_commit import get_llm_analysis, load_cache, save_cache
 
 def llm_strategy_generator(commit_df, price_series, buy_score_threshold, sell_score_threshold, 
                            initial_capital, commission_rate, currency, progress=None, return_signals_only=False):
@@ -20,39 +20,44 @@ def llm_strategy_generator(commit_df, price_series, buy_score_threshold, sell_sc
     # For returning signals only
     signals_series = pd.Series(0, index=price_series.index, dtype=int)
 
+    # --- Cache Optimization: Load cache once and process new commits in batch ---
+    cache = load_cache()
+    all_commit_messages = commit_df['message'].unique()
+    new_commit_messages = [msg for msg in all_commit_messages if msg not in cache]
+
+    if new_commit_messages:
+        print(f"Found {len(new_commit_messages)} new commit messages to analyze.")
+        for idx, message in enumerate(new_commit_messages):
+            if progress:
+                progress(idx / len(new_commit_messages), desc=f"Analyzing new commits with LLM ({idx+1}/{len(new_commit_messages)})")
+            get_llm_analysis(message, cache) # get_llm_analysis now updates the cache directly
+        save_cache(cache) # Save cache after all new commits are analyzed
+        print("Finished analyzing new commit messages and updated cache.")
+    else:
+        print("No new commit messages to analyze. Using existing cache.")
+
     # --- Main Loop: Iterate through each day in the price series ---
     print("DEBUG: Starting main loop through price series.")
     total_days = len(price_series)
-    total_commit_number = len(commit_df)
-    print(f"total commit number:{total_commit_number}")
-    count = 0
+    
     for i, (current_date, current_price) in enumerate(price_series.items()):
         if progress:
-            progress(i / total_days, desc=f"Analyzing & Backtesting Day {i + 1}/{total_days}")
+            progress(i / total_days, desc=f"Backtesting Day {i + 1}/{total_days}")
 
-        # 1. Analyze commits for the current day
-        print(f"DEBUG: Processing commits for date: {current_date.date()}")
+        # 1. Analyze commits for the current day using pre-analyzed results
         todays_commits = commit_df[commit_df['date'].dt.date == current_date.date()]
         daily_score = 0
         if not todays_commits.empty:
-            print(f"DEBUG: Found {len(todays_commits)} commits for {current_date.date()}")
-            for _, (_, row) in enumerate(todays_commits.iterrows()):
-                print(f"commit 處理進度:{count}/{total_commit_number}")
-                commit_message = row['message']
-                print(f"DEBUG: Calling get_llm_analysis for commit: {commit_message[:100]}...")
-                analysis_result = get_llm_analysis(commit_message)
-                print(f"DEBUG: LLM analysis result: {analysis_result}")
+            for _, row_data in enumerate(todays_commits.iterrows()):
+                commit_message = row_data[1]['message']
+                analysis_result = cache.get(commit_message, {"對幣價的影響": "未知"}) # Get from cache
                 impact = analysis_result.get("對幣價的影響", "無明顯影響")
                 if "上漲" in impact:
                     daily_score += 1
                 elif "下跌" in impact:
                     daily_score -= 1
-                print(f"DEBUG: Daily score updated to: {daily_score}")
-                # Removed time.sleep(0.5) for efficiency, as caching handles repeated calls.
-                count += 1
 
         # 2. Generate signal for the current day
-        print(f"DEBUG: Generating signal for {current_date.date()}. Current daily_score: {daily_score}")
         signal = 0
         if holding_shares == 0: # If not holding, check for buy signal
             if daily_score >= buy_score_threshold:
@@ -60,7 +65,6 @@ def llm_strategy_generator(commit_df, price_series, buy_score_threshold, sell_sc
         else: # If holding, check for sell signal
             if daily_score <= sell_score_threshold:
                 signal = -1
-        print(f"DEBUG: Generated signal: {signal}")
 
         signals_series.loc[current_date] = signal
 
