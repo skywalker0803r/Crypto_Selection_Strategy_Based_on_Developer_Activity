@@ -15,7 +15,7 @@ from strategies.simple_sma_strategy import simple_sma_strategy
 
 def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owner, manual_repo, 
                             start_date_input, end_date_input, 
-                            strategy_choice, buy_logic, sell_logic, buy_threshold_input, sell_threshold_input,
+                            strategy_choice, buy_logic, sell_logic, buy_combination_mode, sell_combination_mode, buy_threshold_input, sell_threshold_input,
                             short_sma_period_input, long_sma_period_input,
                             buy_score_threshold_input, sell_score_threshold_input,
                             sma1_period_input, sma2_period_input,
@@ -79,53 +79,76 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
         print(f"DEBUG: Price series aligned to full date range. Remaining data points: {len(price_series_aligned)}.")
 
         # New function to combine strategy signals
-        def combine_strategy_signals(all_signals, buy_logic, sell_logic, all_holdings):
+        def combine_strategy_signals(all_signals, buy_logic, sell_logic, all_holdings, buy_combination_mode, sell_combination_mode):
             combined_buy_signals = pd.Series(False, index=all_signals.index)
             combined_sell_signals = pd.Series(False, index=all_signals.index)
 
             if not all_signals.empty:
                 # Combine buy signals
                 if buy_logic == "AND":
-                    # New AND logic for buy signals
-                    for idx, row in all_signals.iterrows():
-                        current_date = idx
-                        buy_conditions_met = False
-                        
-                        # Check if at least one strategy has a buy signal on this day
-                        strategies_with_buy_signal = [col for col in all_signals.columns if row[col] == 1]
-                        
-                        if strategies_with_buy_signal:
-                            # For each strategy with a buy signal, check if others meet the condition
-                            for primary_strategy in strategies_with_buy_signal:
-                                all_others_meet_condition = True
-                                for other_strategy in all_signals.columns:
-                                    if other_strategy == primary_strategy:
-                                        continue # Skip the primary strategy itself
-                                    
-                                    # Condition for other strategies: either they also buy OR they are holding
-                                    if not (row[other_strategy] == 1 or all_holdings[other_strategy].loc[current_date] == True):
-                                        all_others_meet_condition = False
-                                        break
+                    if buy_combination_mode == "同時": # Original AND logic
+                        combined_buy_signals = all_signals.apply(lambda row: all(row[col] == 1 for col in all_signals.columns), axis=1)
+                    else: # "非同時" (Non-simultaneous) logic
+                        for idx, row in all_signals.iterrows():
+                            current_date = idx
+                            buy_conditions_met = False
+                            
+                            strategies_with_buy_signal = [col for col in all_signals.columns if row[col] == 1]
+                            
+                            if strategies_with_buy_signal:
+                                for primary_strategy in strategies_with_buy_signal:
+                                    all_others_meet_condition = True
+                                    for other_strategy in all_signals.columns:
+                                        if other_strategy == primary_strategy:
+                                            continue
+                                        
+                                        if not (row[other_strategy] == 1 or all_holdings[other_strategy].loc[current_date] == True):
+                                            all_others_meet_condition = False
+                                            break
                                 if all_others_meet_condition:
                                     buy_conditions_met = True
-                                    break # Found a primary strategy that satisfies the condition
-                        
-                        combined_buy_signals.loc[current_date] = buy_conditions_met
+                                    break
+                            
+                            combined_buy_signals.loc[current_date] = buy_conditions_met
 
                 else: # OR logic (remains the same)
                     combined_buy_signals = all_signals.apply(lambda row: any(row[col] == 1 for col in all_signals.columns), axis=1)
 
-                # Combine sell signals (remains the same as before, as the request was only for buy logic)
+                # Combine sell signals
                 if sell_logic == "AND":
-                    combined_sell_signals = all_signals.apply(lambda row: all(row[col] == -1 for col in all_signals.columns), axis=1)
-                else: # OR logic
+                    if sell_combination_mode == "同時": # Original AND logic
+                        combined_sell_signals = all_signals.apply(lambda row: all(row[col] == -1 for col in all_signals.columns), axis=1)
+                    else: # "非同時" (Non-simultaneous) logic
+                        for idx, row in all_signals.iterrows():
+                            current_date = idx
+                            sell_conditions_met = False
+                            
+                            strategies_with_sell_signal = [col for col in all_signals.columns if row[col] == -1]
+                            
+                            if strategies_with_sell_signal:
+                                for primary_strategy in strategies_with_sell_signal:
+                                    all_others_meet_condition = True
+                                    for other_strategy in all_signals.columns:
+                                        if other_strategy == primary_strategy:
+                                            continue
+                                        
+                                        # Condition for other strategies: either they also sell OR they are NOT holding (i.e., in cash/flat)
+                                        if not (row[other_strategy] == -1 or all_holdings[other_strategy].loc[current_date] == False):
+                                            all_others_meet_condition = False
+                                            break
+                                    if all_others_meet_condition:
+                                        sell_conditions_met = True
+                                        break
+                            
+                            combined_sell_signals.loc[current_date] = sell_conditions_met
+
+                else: # OR logic (remains the same)
                     combined_sell_signals = all_signals.apply(lambda row: any(row[col] == -1 for col in all_signals.columns), axis=1)
 
             final_signals = pd.Series(0, index=all_signals.index, dtype=int)
             final_signals[combined_buy_signals] = 1
             final_signals[combined_sell_signals] = -1
             
-            # Ensure buy and sell signals don't overlap for the same day
             final_signals[(combined_buy_signals) & (combined_sell_signals)] = 0
 
             return final_signals
@@ -239,7 +262,7 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
 
             # Combine signals based on selected logic
             print("DEBUG: Combining strategy signals...")
-            final_strategy_signals = combine_strategy_signals(all_strategy_signals, buy_logic, sell_logic, all_strategy_holdings)
+            final_strategy_signals = combine_strategy_signals(all_strategy_signals, buy_logic, sell_logic, all_strategy_holdings, buy_combination_mode, sell_combination_mode)
             print(f"DEBUG: Combined strategy signals. Length: {len(final_strategy_signals)}")
 
             print("DEBUG: Running backtest...")

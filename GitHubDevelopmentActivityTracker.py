@@ -83,10 +83,22 @@ with gr.Blocks() as demo:
                 value="AND",
                 interactive=True
             )
+            buy_combination_mode = gr.Radio(
+                ["同時", "非同時"],
+                label="Buy Combination Mode (for AND logic only)",
+                value="同時",
+                interactive=True
+            )
             sell_logic = gr.Radio(
                 ["AND", "OR"],
                 label="Sell Condition Logic",
                 value="AND",
+                interactive=True
+            )
+            sell_combination_mode = gr.Radio(
+                ["同時", "非同時"],
+                label="Sell Combination Mode (for AND logic only)",
+                value="同時",
                 interactive=True
             )
             buy_threshold_input = gr.Number(
@@ -246,7 +258,7 @@ with gr.Blocks() as demo:
         inputs=[
             crypto_choice, manual_coingecko_id, manual_github_owner, manual_github_repo,
             start_date_picker, end_date_picker,
-            strategy_choice, buy_logic, sell_logic, buy_threshold_input, sell_threshold_input, 
+            strategy_choice, buy_logic, sell_logic, buy_combination_mode, sell_combination_mode, buy_threshold_input, sell_threshold_input, 
             short_sma_period_input, long_sma_period_input,
             buy_score_threshold_input, sell_score_threshold_input,
             sma1_period_input, sma2_period_input,
