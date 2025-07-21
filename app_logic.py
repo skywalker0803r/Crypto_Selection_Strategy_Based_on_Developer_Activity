@@ -377,6 +377,7 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
         if hyperparameter_search_mode:
             print("DEBUG: Hyperparameter search mode enabled. Parsing range inputs.")
             # Parse all range inputs
+            print(f"DEBUG: strategy_choice: {strategy_choice}")
             buy_threshold_values = parse_parameter_input(buy_threshold_range_input, "Buy Commit Threshold") if "Simple Commit Threshold Strategy" in strategy_choice else [buy_threshold_input]
             sell_threshold_values = parse_parameter_input(sell_threshold_range_input, "Sell Commit Threshold") if "Simple Commit Threshold Strategy" in strategy_choice else [sell_threshold_input]
             short_sma_values = parse_parameter_input(short_sma_period_range_input, "Short Commit SMA Period") if "Commit SMA Strategy" in strategy_choice else [short_sma_period_input]
@@ -385,6 +386,15 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
             sell_score_values = parse_parameter_input(sell_score_threshold_range_input, "Sell Score Threshold") if "LLM Commit Analysis Strategy" in strategy_choice else [sell_score_threshold_input]
             sma1_values = parse_parameter_input(sma1_period_range_input, "SMA1 Period") if "Simple SMA Strategy" in strategy_choice else [sma1_period_input]
             sma2_values = parse_parameter_input(sma2_period_range_input, "SMA2 Period") if "Simple SMA Strategy" in strategy_choice else [sma2_period_input]
+
+            print(f"DEBUG: Length of buy_threshold_values: {len(buy_threshold_values)}")
+            print(f"DEBUG: Length of sell_threshold_values: {len(sell_threshold_values)}")
+            print(f"DEBUG: Length of short_sma_values: {len(short_sma_values)}")
+            print(f"DEBUG: Length of long_sma_values: {len(long_sma_values)}")
+            print(f"DEBUG: Length of buy_score_values: {len(buy_score_values)}")
+            print(f"DEBUG: Length of sell_score_values: {len(sell_score_values)}")
+            print(f"DEBUG: Length of sma1_values: {len(sma1_values)}")
+            print(f"DEBUG: Length of sma2_values: {len(sma2_values)}")
 
             print(f"DEBUG: buy_threshold_values: {buy_threshold_values}")
             print(f"DEBUG: sell_threshold_values: {sell_threshold_values}")

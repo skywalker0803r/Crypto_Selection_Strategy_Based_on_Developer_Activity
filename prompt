@@ -246,3 +246,40 @@ ValueError: too many values to unpack (expected 6)
 Strategy Performance Metrics和Trade Log也要顯示喔
 
 Hyperparameter Search Results是不是點了一筆Results查看後Hyperparameter Search Results就會消失
+
+
+DEBUG: Hyperparameter search mode enabled. Parsing range inputs.
+DEBUG: strategy_choice: ['Simple Commit Threshold Strategy', 'Commit SMA Strategy']
+DEBUG: Length of buy_threshold_values: 3
+DEBUG: Length of sell_threshold_values: 1
+DEBUG: Length of short_sma_values: 3
+DEBUG: Length of long_sma_values: 3
+DEBUG: Length of buy_score_values: 1
+DEBUG: Length of sell_score_values: 1
+DEBUG: Length of sma1_values: 1
+DEBUG: Length of sma2_values: 1
+DEBUG: buy_threshold_values: [2, 3, 4]
+DEBUG: sell_threshold_values: [0]
+DEBUG: short_sma_values: [5, 10, 15]
+DEBUG: long_sma_values: [20, 25, 30]
+DEBUG: buy_score_values: [2]
+DEBUG: sell_score_values: [-2]
+DEBUG: sma1_values: [10]
+DEBUG: sma2_values: [30]
+DEBUG: Generated 27 hyperparameter combinations.
+
+DEBUG: Running backtest for combination 1/27 with params: {'buy_threshold': 2, 'sell_threshold': 0, 'short_sma': 5, 'long_sma': 20, 'buy_score': 2, 'sell_score': -2, 'sma1': 10, 'sma2': 30, 'combo_index': 1}
+DEBUG: Combining strategy signals...
+DEBUG: Combined strategy signals. Length: 364
+DEBUG: Running backtest...
+DEBUG: Backtest generator created.
+DEBUG: Backtest for combination 1 completed. Performance metrics: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '122.23%', 'Annualized Return (%)': '159.55%', 'Max Drawdown': '-22.37%', 'Sharpe Ratio': '2.86', 'Sortino Ratio': '4.31', 'Buy and Hold Strategy Total Return': '8.07%', 'Final Capital (with commissions)': '22222.80 USD', '--- Trade Statistics ---': '', 'Total Trades': 7, 'Win Rate': '57.14%', 'Profit Factor': '9.17', 'Total Commission Paid': '171.91 USD', 'Average Holding Days': '34.57 days', 'Average Profit per Trade': '1746.11 USD', 'Trade Frequency (per day)': '0.0192'}
+DEBUG: Running backtest for combination 2/27
+
+...
+DEBUG: Backtest for combination 26 completed. Performance metrics: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '-17.50%', 'Annualized Return (%)': '-5.09%', 'Max Drawdown': '-52.44%', 'Sharpe Ratio': '-0.10', 'Sortino Ratio': '-0.10', 'Buy and Hold Strategy Total Return': '8.07%', 'Final Capital (with commissions)': '8250.32 USD', '--- Trade Statistics ---': '', 'Total Trades': 4, 'Win Rate': '25.00%', 'Profit Factor': '0.15', 'Total Commission Paid': '65.85 USD', 'Average Holding Days': '49.00 days', 'Average Profit per Trade': '-846.70 USD', 'Trade Frequency (per day)': '0.0110'}
+DEBUG: Running backtest for combination 27/27 with params: {'buy_threshold': 4, 'sell_threshold': 0, 'short_sma': 15, 'long_sma': 30, 'buy_score': 2, 'sell_score': -2, 'sma1': 10, 'sma2': 30, 'combo_index': 27}
+DEBUG: Combining strategy signals...
+DEBUG: Combined strategy signals. Length: 364
+DEBUG: Running backtest...
+DEBUG: Backtest generator created.
