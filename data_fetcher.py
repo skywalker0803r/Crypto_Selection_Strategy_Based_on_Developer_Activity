@@ -2,6 +2,33 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 import time
+import json
+import os
+
+CACHE_DIR = "cache"
+GITHUB_COMMITS_CACHE_FILE = os.path.join(CACHE_DIR, "github_commits_cache.json")
+
+def _load_cache():
+    if not os.path.exists(CACHE_DIR):
+        os.makedirs(CACHE_DIR)
+    if os.path.exists(GITHUB_COMMITS_CACHE_FILE):
+        with open(GITHUB_COMMITS_CACHE_FILE, 'r') as f:
+            try:
+                cache_data = json.load(f)
+                print(f"DEBUG(Cache): Successfully loaded cache from {GITHUB_COMMITS_CACHE_FILE}. Contains {len(cache_data)} top-level entries.")
+                return cache_data
+            except json.JSONDecodeError as e:
+                print(f"ERROR(Cache): Failed to decode JSON from {GITHUB_COMMITS_CACHE_FILE}: {e}. Returning empty cache.")
+                return {}
+    print(f"DEBUG(Cache): Cache file {GITHUB_COMMITS_CACHE_FILE} not found. Returning empty cache.")
+    return {}
+
+def _save_cache(data):
+    if not os.path.exists(CACHE_DIR):
+        os.makedirs(CACHE_DIR)
+    with open(GITHUB_COMMITS_CACHE_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
+    print(f"DEBUG(Cache): Successfully saved cache to {GITHUB_COMMITS_CACHE_FILE}.")
 
 def get_binance_trading_pairs(top_n, currency, predefined_cryptos):
     """
@@ -117,64 +144,155 @@ def get_crypto_prices(symbol, currency, start_date, end_date):
 
 def get_github_commits(owner, repo, start_date, end_date, headers):
     print(f"\n--- Starting to fetch GitHub Commit data for {owner}/{repo} ---")
-    commits_data = []
-    page = 1
-    per_page = 100
 
-    api_start_date = (start_date - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    api_end_date = (end_date + timedelta(days=1)).replace(hour=23, minute=59, second=59, microsecond=999999)
+    cache = _load_cache()
+    repo_key = f"{owner}/{repo}"
+    if repo_key not in cache:
+        cache[repo_key] = {} # Initialize cache for this repo
 
-    since_date_str = api_start_date.isoformat(timespec='seconds') + 'Z'
-    until_date_str = api_end_date.isoformat(timespec='seconds') + 'Z'
-    print(f"DEBUG(GitHub API): Search range: from {since_date_str} to {until_date_str}")
+    repo_cache = cache[repo_key]
+    print(f"DEBUG(GitHub API): Initial cache for {repo_key}: {len(repo_cache)} entries.")
 
-    try:
-        while True:
-            url = f"https://api.github.com/repos/{owner}/{repo}/commits?per_page={per_page}&page={page}&since={since_date_str}&until={until_date_str}"
-            print(f"DEBUG(GitHub API): Request URL: {url}")
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
+    requested_dates = set()
+    current_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    while current_date <= end_date.replace(hour=0, minute=0, second=0, microsecond=0):
+        requested_dates.add(current_date.strftime('%Y-%m-%d'))
+        current_date += timedelta(days=1)
+    print(f"DEBUG(GitHub API): Requested dates: {sorted(list(requested_dates))}")
 
-            commits = response.json()
-            print(f"DEBUG(GitHub API): Received {len(commits)} commits for page {page}.")
+    available_dates = set(repo_cache.keys())
+    print(f"DEBUG(GitHub API): Available dates in cache: {sorted(list(available_dates))}")
 
-            if not commits:
-                print(f"DEBUG(GitHub API): No more commits found for page {page}, breaking loop.")
-                break
+    missing_dates_str = sorted(list(requested_dates - available_dates))
 
-            for commit in commits:
-                commit_date_str = commit['commit']['author']['date']
-                commit_date = datetime.strptime(commit_date_str, '%Y-%m-%dT%H:%M:%SZ')
-                commit_message = commit['commit']['message']
-                if start_date.replace(hour=0, minute=0, second=0, microsecond=0) <= commit_date.replace(hour=0, minute=0, second=0, microsecond=0) <= end_date.replace(hour=0, minute=0, second=0, microsecond=0):
-                    commits_data.append({'date': commit_date, 'message': commit_message})
+    all_commits_for_range = []
 
-            if len(commits) < per_page:
-                print(f"DEBUG(GitHub API): Less than {per_page} commits received, assuming last page.")
-                break
+    # Fetch missing data
+    if missing_dates_str:
+        print(f"DEBUG(GitHub API): Missing data for dates: {missing_dates_str}")
+        
+        # Group missing dates into contiguous blocks for API calls
+        contiguous_blocks = []
+        if missing_dates_str:
+            current_block_start = datetime.strptime(missing_dates_str[0], '%Y-%m-%d')
+            current_block_end = current_block_start
+            for i in range(1, len(missing_dates_str)):
+                date = datetime.strptime(missing_dates_str[i], '%Y-%m-%d')
+                if date == current_block_end + timedelta(days=1):
+                    current_block_end = date
+                else:
+                    contiguous_blocks.append((current_block_start, current_block_end))
+                    current_block_start = date
+                    current_block_end = date
+            contiguous_blocks.append((current_block_start, current_block_end))
 
-            page += 1
-            time.sleep(0.1)
+        for block_start, block_end in contiguous_blocks:
+            print(f"DEBUG(GitHub API): Fetching block from {block_start.strftime('%Y-%m-%d')} to {block_end.strftime('%Y-%m-%d')}")
+            
+            # Expand search range slightly for API to ensure all commits are caught
+            api_start_date = (block_start - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            api_end_date = (block_end + timedelta(days=1)).replace(hour=23, minute=59, second=59, microsecond=999999)
 
-        if not commits_data:
-            print(f"Warning: No Commit data fetched from GitHub repository {owner}/{repo} within the specified date range ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}), despite expanded search range.")
-            return pd.DataFrame(columns=['date', 'message'])
+            since_date_str = api_start_date.isoformat(timespec='seconds') + 'Z'
+            until_date_str = api_end_date.isoformat(timespec='seconds') + 'Z'
+            print(f"DEBUG(GitHub API): API search range: from {since_date_str} to {until_date_str}")
 
-        df = pd.DataFrame(commits_data)
-        df['date'] = pd.to_datetime(df['date']).dt.floor('D')
-        print(f"Successfully fetched {len(df)} GitHub Commit data points.")
-        return df
+            page = 1
+            per_page = 100
+            
+            try:
+                while True:
+                    url = f"https://api.github.com/repos/{owner}/{repo}/commits?per_page={per_page}&page={page}&since={since_date_str}&until={until_date_str}"
+                    print(f"DEBUG(GitHub API): Request URL: {url}")
+                    response = requests.get(url, headers=headers)
+                    response.raise_for_status()
 
-    except requests.exceptions.HTTPError as e:
-        print(f"Error: HTTP error occurred while fetching GitHub Commits: {e} (Status code: {response.status_code if 'response' in locals() else 'N/A'})")
-        if 'response' in locals() and response.status_code == 404:
-            print("Please check if GitHub Owner and Repository names are correct.")
-        elif 'response' in locals() and response.status_code == 403:
-            print(f"GitHub API rate limit might have been reached (Status code: {response.status_code}). Consider setting GITHUB_TOKEN.")
-        return pd.Series(dtype='int64')
-    except requests.exceptions.RequestException as e:
-        print(f"Error: Failed to connect to GitHub API: {e}")
-        return pd.Series(dtype='int64')
-    except Exception as e:
-        print(f"Error: An unknown error occurred while fetching GitHub Commits: {e}")
-        return pd.Series(dtype='int64')
+                    commits = response.json()
+                    print(f"DEBUG(GitHub API): Received {len(commits)} commits for page {page}.")
+
+                    if not commits:
+                        print(f"DEBUG(GitHub API): No more commits found for page {page}, breaking loop.")
+                        # If no commits are returned for a block, ensure all dates in that block are marked as checked
+                        temp_date = block_start.replace(hour=0, minute=0, second=0, microsecond=0)
+                        while temp_date <= block_end.replace(hour=0, minute=0, second=0, microsecond=0):
+                            day_str = temp_date.strftime('%Y-%m-%d')
+                            if day_str not in repo_cache: # Only add if not already present (e.g., from a previous page)
+                                repo_cache[day_str] = [] # Mark as checked with no commits
+                                print(f"DEBUG(GitHub API): Marked {day_str} as no commits in cache.")
+                            temp_date += timedelta(days=1)
+                        break
+
+                    for commit in commits:
+                        commit_date_str = commit['commit']['author']['date']
+                        commit_date_obj = datetime.strptime(commit_date_str, '%Y-%m-%dT%H:%M:%SZ')
+                        commit_day_str = commit_date_obj.strftime('%Y-%m-%d')
+                        
+                        # Only store commits within the requested block's date range
+                        if block_start.replace(hour=0, minute=0, second=0, microsecond=0) <= commit_date_obj.replace(hour=0, minute=0, second=0, microsecond=0) <= block_end.replace(hour=0, minute=0, second=0, microsecond=0):
+                            if commit_day_str not in repo_cache:
+                                repo_cache[commit_day_str] = []
+                            # Store the raw commit data or a simplified version
+                            repo_cache[commit_day_str].append({
+                                'date': commit_date_str, # Store as string for JSON
+                                'message': commit['commit']['message']
+                            })
+                            print(f"DEBUG(GitHub API): Added commit for {commit_day_str} to cache.")
+
+                    if len(commits) < per_page:
+                        print(f"DEBUG(GitHub API): Less than {per_page} commits received, assuming last page.")
+                        # After fetching all pages for a block, ensure all dates in that block are marked as checked
+                        temp_date = block_start.replace(hour=0, minute=0, second=0, microsecond=0)
+                        while temp_date <= block_end.replace(hour=0, minute=0, second=0, microsecond=0):
+                            day_str = temp_date.strftime('%Y-%m-%d')
+                            if day_str not in repo_cache: # Only add if not already present (e.g., if no commits were found for this specific day)
+                                repo_cache[day_str] = [] # Mark as checked with no commits
+                                print(f"DEBUG(GitHub API): Marked {day_str} as no commits in cache (end of block)." )
+                            temp_date += timedelta(days=1)
+                        break
+
+                    page += 1
+                    time.sleep(0.1) # Be kind to the API
+
+            except requests.exceptions.HTTPError as e:
+                print(f"Error: HTTP error occurred while fetching GitHub Commits: {e} (Status code: {response.status_code if 'response' in locals() else 'N/A'})")
+                if 'response' in locals() and response.status_code == 404:
+                    print("Please check if GitHub Owner and Repository names are correct.")
+                elif 'response' in locals() and response.status_code == 403:
+                    print(f"GitHub API rate limit might have been reached (Status code: {response.status_code}). Consider setting GITHUB_TOKEN.")
+                # For now, return empty DataFrame on error for missing data
+                return pd.DataFrame(columns=['date', 'message'])
+            except requests.exceptions.RequestException as e:
+                print(f"Error: Failed to connect to GitHub API: {e}")
+                return pd.DataFrame(columns=['date', 'message'])
+            except Exception as e:
+                print(f"Error: An unknown error occurred while fetching GitHub Commits: {e}")
+                return pd.DataFrame(columns=['date', 'message'])
+    else:
+        print("DEBUG(GitHub API): All requested dates are already in cache.")
+
+    # Consolidate all commits for the requested range from cache
+    current_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    while current_date <= end_date.replace(hour=0, minute=0, second=0, microsecond=0):
+        day_str = current_date.strftime('%Y-%m-%d')
+        if day_str in repo_cache:
+            for commit_data in repo_cache[day_str]:
+                # Convert date string back to datetime object for DataFrame
+                commit_data_copy = commit_data.copy()
+                commit_data_copy['date'] = datetime.strptime(commit_data_copy['date'], '%Y-%m-%dT%H:%M:%SZ')
+                all_commits_for_range.append(commit_data_copy)
+        current_date += timedelta(days=1)
+
+    if not all_commits_for_range:
+        print(f"Warning: No Commit data found for {owner}/{repo} within the specified date range ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}).")
+        df = pd.DataFrame(columns=['date', 'message'])
+    else:
+        df = pd.DataFrame(all_commits_for_range)
+        df['date'] = pd.to_datetime(df['date']).dt.floor('D') # Ensure date is floored to day
+        # Filter to ensure strict adherence to requested start_date and end_date
+        df = df[(df['date'] >= start_date.replace(hour=0, minute=0, second=0, microsecond=0)) &
+                (df['date'] <= end_date.replace(hour=0, minute=0, second=0, microsecond=0))]
+        print(f"Successfully consolidated {len(df)} GitHub Commit data points for the requested range.")
+
+    _save_cache(cache) # Save the updated cache
+
+    return df
