@@ -79,18 +79,43 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
         print(f"DEBUG: Price series aligned to full date range. Remaining data points: {len(price_series_aligned)}.")
 
         # New function to combine strategy signals
-        def combine_strategy_signals(all_signals, buy_logic, sell_logic):
+        def combine_strategy_signals(all_signals, buy_logic, sell_logic, all_holdings):
             combined_buy_signals = pd.Series(False, index=all_signals.index)
             combined_sell_signals = pd.Series(False, index=all_signals.index)
 
             if not all_signals.empty:
                 # Combine buy signals
                 if buy_logic == "AND":
-                    combined_buy_signals = all_signals.apply(lambda row: all(row[col] == 1 for col in all_signals.columns), axis=1)
-                else: # OR logic
+                    # New AND logic for buy signals
+                    for idx, row in all_signals.iterrows():
+                        current_date = idx
+                        buy_conditions_met = False
+                        
+                        # Check if at least one strategy has a buy signal on this day
+                        strategies_with_buy_signal = [col for col in all_signals.columns if row[col] == 1]
+                        
+                        if strategies_with_buy_signal:
+                            # For each strategy with a buy signal, check if others meet the condition
+                            for primary_strategy in strategies_with_buy_signal:
+                                all_others_meet_condition = True
+                                for other_strategy in all_signals.columns:
+                                    if other_strategy == primary_strategy:
+                                        continue # Skip the primary strategy itself
+                                    
+                                    # Condition for other strategies: either they also buy OR they are holding
+                                    if not (row[other_strategy] == 1 or all_holdings[other_strategy].loc[current_date] == True):
+                                        all_others_meet_condition = False
+                                        break
+                                if all_others_meet_condition:
+                                    buy_conditions_met = True
+                                    break # Found a primary strategy that satisfies the condition
+                        
+                        combined_buy_signals.loc[current_date] = buy_conditions_met
+
+                else: # OR logic (remains the same)
                     combined_buy_signals = all_signals.apply(lambda row: any(row[col] == 1 for col in all_signals.columns), axis=1)
 
-                # Combine sell signals
+                # Combine sell signals (remains the same as before, as the request was only for buy logic)
                 if sell_logic == "AND":
                     combined_sell_signals = all_signals.apply(lambda row: all(row[col] == -1 for col in all_signals.columns), axis=1)
                 else: # OR logic
@@ -101,11 +126,40 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
             final_signals[combined_sell_signals] = -1
             
             # Ensure buy and sell signals don't overlap for the same day
-            # If both buy and sell signals are true for a day, prioritize sell (or buy, depending on desired behavior) 
-            # Here, we'll make it 0 (no action) if both are true
             final_signals[(combined_buy_signals) & (combined_sell_signals)] = 0
 
             return final_signals
+
+        def simulate_holdings(price_series, signals_series, initial_capital, commission_rate):
+            """
+            Simulates trades for a single strategy to determine holding status on each day.
+            Returns a Series of booleans (True if holding, False otherwise).
+            """
+            is_holding_series = pd.Series(False, index=price_series.index, dtype=bool)
+            current_cash = initial_capital
+            holding_shares = 0
+            open_trade = None
+
+            for i, (current_date, current_price) in enumerate(price_series.items()):
+                signal = signals_series.loc[current_date]
+
+                if pd.isna(current_price):
+                    is_holding_series.loc[current_date] = (holding_shares > 0)
+                    continue
+
+                if signal == 1 and open_trade is None and current_cash > 0:
+                    shares_to_buy = (current_cash / current_price) * (1 - commission_rate)
+                    holding_shares = shares_to_buy
+                    current_cash = 0
+                    open_trade = {'buy_date': current_date, 'buy_price': current_price, 'shares': holding_shares}
+                elif signal == -1 and open_trade is not None:
+                    current_cash = holding_shares * current_price * (1 - commission_rate)
+                    holding_shares = 0
+                    open_trade = None
+
+                is_holding_series.loc[current_date] = (holding_shares > 0)
+
+            return is_holding_series
 
         def generate_ui_output(results):
             cumulative_returns_wc, buy_and_hold_returns_plot, buy_points, sell_points, performance_metrics, trades_info_raw = results
@@ -149,42 +203,43 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
 
         # Generate signals for each selected strategy
         all_strategy_signals = pd.DataFrame(index=price_series_aligned.index)
+        all_strategy_holdings = pd.DataFrame(index=price_series_aligned.index, dtype=bool)
 
         if "No Strategy" in strategy_choice or not strategy_choice:
             # If "No Strategy" is selected or no strategy is selected, return no signals
             final_strategy_signals = pd.Series(0, index=price_series_aligned.index, dtype=int)
         else:
             for strategy in strategy_choice:
+                signals = pd.Series(0, index=price_series_aligned.index, dtype=int) # Initialize signals for current strategy
                 if strategy == "Simple Commit Threshold Strategy":
                     signals = simple_commit_threshold_strategy(commit_counts_for_plot.reindex(price_series_aligned.index, fill_value=0), buy_threshold_input, sell_threshold_input)
-                    all_strategy_signals["Simple Commit Threshold Strategy"] = signals
                 elif strategy == "Commit SMA Strategy":
                     signals = commit_sma_strategy(commit_counts_for_plot.reindex(price_series_aligned.index, fill_value=0), short_sma_period_input, long_sma_period_input)
-                    all_strategy_signals["Commit SMA Strategy"] = signals
                 elif strategy == "LLM Commit Analysis Strategy":
-                    # LLM strategy will generate signals for the entire period first
-                    # The llm_strategy_generator will return a single series of signals
                     llm_signals_generator = llm_strategy_generator(commit_df, price_series_aligned, 
                                                                 buy_score_threshold_input, sell_score_threshold_input,
                                                                 config.INITIAL_CAPITAL, config.COMMISSION_RATE, 
                                                                 config.DEFAULT_CRYPTO_CURRENCY, progress, return_signals_only=True)
-                    # Consume the generator to get the final signals
                     llm_signals = None
                     for _, _, _, _, _, signals_only in llm_signals_generator:
                         llm_signals = signals_only # The last yield will contain the full signals
                     print(f"DEBUG: LLM signals consumed. Length: {len(llm_signals) if llm_signals is not None else 0}")
                     
                     if llm_signals is not None:
-                        all_strategy_signals["LLM Commit Analysis Strategy"] = llm_signals.reindex(price_series_aligned.index, fill_value=0)
+                        signals = llm_signals.reindex(price_series_aligned.index, fill_value=0)
                     else:
-                        all_strategy_signals["LLM Commit Analysis Strategy"] = pd.Series(0, index=price_series_aligned.index, dtype=int)
+                        signals = pd.Series(0, index=price_series_aligned.index, dtype=int)
                 elif strategy == "Simple SMA Strategy":
                     signals = simple_sma_strategy(price_series_aligned, sma1_period_input, sma2_period_input)
-                    all_strategy_signals["Simple SMA Strategy"] = signals
+
+                all_strategy_signals[strategy] = signals
+                # Simulate holdings for the current strategy
+                holding_status = simulate_holdings(price_series_aligned, signals, config.INITIAL_CAPITAL, config.COMMISSION_RATE)
+                all_strategy_holdings[strategy] = holding_status
 
             # Combine signals based on selected logic
             print("DEBUG: Combining strategy signals...")
-            final_strategy_signals = combine_strategy_signals(all_strategy_signals, buy_logic, sell_logic)
+            final_strategy_signals = combine_strategy_signals(all_strategy_signals, buy_logic, sell_logic, all_strategy_holdings)
             print(f"DEBUG: Combined strategy signals. Length: {len(final_strategy_signals)}")
 
             print("DEBUG: Running backtest...")
