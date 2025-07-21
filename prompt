@@ -41,3 +41,208 @@ DEBUG(GitHub API): Less than 100 commits received, assuming last page.
 DEBUG(GitHub API): Fetching block from 2024-08-07 to 2024-08-07
 DEBUG(GitHub API): API search range: from 2024-08-06T00:00:00Z to 2024-08-08T23:59:59Z
 DEBUG(GitHub API): Request URL: https://api.github.com/repos/ethereum/go-ethereum/commits?per_page=100&page=1&since=2024-08-06T00:00:00Z&until=2024-08-08T23:59:59Z
+
+我加個超參數搜索功能 
+不是有策略參數嗎?
+參數應該可以變成設定一個範圍例如SMA1 [5,10,15] SMA2 [20,30,40] 這樣就有3*3 9種組合
+之後對九種組合進行回測 其實程式不用改太多 只是針對不同的參數 跑一樣的流程而已 
+最後整理回測結果成表格渲染到UI上 按照報酬率排序 
+然後點單條紀錄 會在UI上顯示該筆資料的結果
+讓我們一步一步來第一步 製作前端UI讓原本的策略參數 可以選擇改成 超參數調整模試 從輸入單一值變成一個範圍 先做到這
+
+DEBUG: Running backtest for combination 3/3 with params: {'buy_threshold': 3, 'sell_threshold': 0, 'short_sma': 5, 'long_sma': 20, 'buy_score': 2, 'sell_score': -2, 'sma1': 10, 'sma2': 30, 'combo_index': 3}
+DEBUG: Combining strategy signals...
+DEBUG: Combined strategy signals. Length: 364
+DEBUG: Running backtest...
+DEBUG: Backtest generator created.
+DEBUG: Backtest for combination 3 completed. Performance metrics: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '122.23%', 'Max Drawdown': '-22.37%', 'Buy and Hold Strategy Total Return': '10.34%', 'Final Capital (with commissions)': '22222.80 USD', '--- Trade Statistics ---': '', 'Total Trades': 7, 'Win Rate': '57.14%', 'Profit Factor': '9.17', 'Total Commission Paid': '171.91 USD', 'Average Holding Days': '34.57 days', 'Average Profit per Trade': '1746.11 USD', 'Trade Frequency (per day)': '0.0192'}
+DEBUG: All backtests completed in hyperparameter search mode. Sorting results.
+Traceback (most recent call last):
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\queueing.py", line 626, in process_events
+    response = await route_utils.call_process_api(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\route_utils.py", line 350, in call_process_api
+    output = await app.get_blocks().process_api(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\blocks.py", line 2235, in process_api
+    result = await self.call_function(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\blocks.py", line 1746, in call_function
+    prediction = await anyio.to_thread.run_sync(  # type: ignore
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\anyio\to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\anyio\_backends\_asyncio.py", line 2470, in run_sync_in_worker_thread
+    return await future
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\anyio\_backends\_asyncio.py", line 967, in run
+    result = context.run(func, *args)
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\utils.py", line 917, in wrapper
+    response = f(*args, **kwargs)
+  File "C:\Users\ricky\Desktop\coin\Crypto_Selection_Strategy_Based_on_Developer_Activity\GitHubDevelopmentActivityTracker.py", line 442, in display_selected_hyperparameter_result
+    simple_commit_params_str = selected_row_data[8] # Index 8 for "Simple Commit Threshold Params"
+TypeError: 'int' object is not subscriptable
+
+DEBUG: Backtest for combination 3 completed. Performance metrics: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '122.23%', 'Max Drawdown': '-22.37%', 'Buy and Hold Strategy Total Return': '10.18%', 'Final Capital (with commissions)': '22222.80 USD', '--- Trade Statistics ---': '', 'Total Trades': 7, 'Win Rate': '57.14%', 'Profit Factor': '9.17', 'Total Commission Paid': '171.91 USD', 'Average Holding Days': '34.57 days', 'Average Profit per Trade': '1746.11 USD', 'Trade Frequency (per day)': '0.0192'}
+DEBUG: All backtests completed in hyperparameter search mode. Sorting results.
+Traceback (most recent call last):
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\queueing.py", line 626, in process_events
+    response = await route_utils.call_process_api(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\route_utils.py", line 350, in call_process_api
+    output = await app.get_blocks().process_api(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\blocks.py", line 2235, in process_api
+    result = await self.call_function(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\blocks.py", line 1746, in call_function
+    prediction = await anyio.to_thread.run_sync(  # type: ignore
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\anyio\to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\anyio\_backends\_asyncio.py", line 2470, in run_sync_in_worker_thread
+    return await future
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\anyio\_backends\_asyncio.py", line 967, in run
+    result = context.run(func, *args)
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\utils.py", line 917, in wrapper
+    response = f(*args, **kwargs)
+  File "C:\Users\ricky\Desktop\coin\Crypto_Selection_Strategy_Based_on_Developer_Activity\GitHubDevelopmentActivityTracker.py", line 424, in display_selected_hyperparameter_result
+    selected_row_data = evt.row # This will be a list of values from the selected row
+AttributeError: 'SelectData' object has no attribute 'row'
+
+Traceback (most recent call last):
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\queueing.py", line 626, in process_events
+    response = await route_utils.call_process_api(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\route_utils.py", line 350, in call_process_api
+    output = await app.get_blocks().process_api(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\blocks.py", line 2235, in process_api
+    result = await self.call_function(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\blocks.py", line 1746, in call_function
+    prediction = await anyio.to_thread.run_sync(  # type: ignore
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\anyio\to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\anyio\_backends\_asyncio.py", line 2470, in run_sync_in_worker_thread
+    return await future
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\anyio\_backends\_asyncio.py", line 967, in run
+    result = context.run(func, *args)
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\utils.py", line 917, in wrapper
+    response = f(*args, **kwargs)
+  File "C:\Users\ricky\Desktop\coin\Crypto_Selection_Strategy_Based_on_Developer_Activity\GitHubDevelopmentActivityTracker.py", line 426, in display_selected_hyperparameter_result
+    selected_row_data = hyperparameter_results_data[row_index] # Get the selected row data from the full data
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\pandas\core\frame.py", line 4107, in __getitem__
+    indexer = self.columns.get_loc(key)
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\pandas\core\indexes\base.py", line 3819, in get_loc
+    raise KeyError(key) from err
+KeyError: 0
+還是錯誤會不會你對程式的理解不夠深 看看要不要到處加PRINT來幫助你DEBUG追蹤錯誤源頭
+
+DEBUG: Generated 3 hyperparameter combinations.
+DEBUG: Running backtest for combination 1/3 with params: {'buy_threshold': 1, 'sell_threshold': 0, 'short_sma': 5, 'long_sma': 20, 'buy_score': 2, 'sell_score': -2, 'sma1': 10, 'sma2': 30, 'combo_index': 1}
+DEBUG: Combining strategy signals...
+DEBUG: Combined strategy signals. Length: 364
+DEBUG: Running backtest...
+DEBUG: Backtest generator created.
+DEBUG: Backtest for combination 1 completed. Performance metrics: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '55.04%', 'Max Drawdown': '-22.46%', 'Buy and Hold Strategy Total Return': '10.11%', 'Final Capital (with commissions)': '15504.25 USD', '--- Trade Statistics ---': '', 'Total Trades': 7, 'Win Rate': '42.86%', 'Profit Factor': '3.73', 'Total Commission Paid': '138.75 USD', 'Average Holding Days': '28.00 days', 'Average Profit per Trade': '786.32 USD', 'Trade Frequency (per day)': '0.0192'}
+DEBUG: Running backtest for combination 2/3 with params: {'buy_threshold': 2, 'sell_threshold': 0, 'short_sma': 5, 'long_sma': 20, 'buy_score': 2, 'sell_score': -2, 'sma1': 10, 'sma2': 30, 'combo_index': 2}
+DEBUG: Combining strategy signals...
+DEBUG: Combined strategy signals. Length: 364
+DEBUG: Running backtest...
+DEBUG: Backtest generator created.
+DEBUG: Backtest for combination 2 completed. Performance metrics: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '122.23%', 'Max Drawdown': '-22.37%', 'Buy and Hold Strategy Total Return': '10.11%', 'Final Capital (with commissions)': '22222.80 USD', '--- Trade Statistics ---': '', 'Total Trades': 7, 'Win Rate': '57.14%', 'Profit Factor': '9.17', 'Total Commission Paid': '171.91 USD', 'Average Holding Days': '34.57 days', 'Average Profit per Trade': '1746.11 USD', 'Trade Frequency (per day)': '0.0192'}
+DEBUG: Running backtest for combination 3/3 with params: {'buy_threshold': 3, 'sell_threshold': 0, 'short_sma': 5, 'long_sma': 20, 'buy_score': 2, 'sell_score': -2, 'sma1': 10, 'sma2': 30, 'combo_index': 3}
+DEBUG: Combining strategy signals...
+DEBUG: Combined strategy signals. Length: 364
+DEBUG: Running backtest...
+DEBUG: Backtest generator created.
+DEBUG: Backtest for combination 3 completed. Performance metrics: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '122.23%', 'Max Drawdown': '-22.37%', 'Buy and Hold Strategy Total Return': '10.11%', 'Final Capital (with commissions)': '22222.80 USD', '--- Trade Statistics ---': '', 'Total Trades': 7, 'Win Rate': '57.14%', 'Profit Factor': '9.17', 'Total Commission Paid': '171.91 USD', 'Average Holding Days': '34.57 days', 'Average Profit per Trade': '1746.11 USD', 'Trade Frequency (per day)': '0.0192'}
+DEBUG: All backtests completed in hyperparameter search mode. Sorting results.
+我看後臺數據是正確的 但是ui數據都顯示0
+
+DEBUG: Running backtest for combination 1/3 with params: {'buy_threshold': 2, 'sell_threshold': 0, 'short_sma': 5, 'long_sma': 20, 'buy_score': 2, 'sell_score': -2, 'sma1': 10, 'sma2': 30, 'combo_index': 1}
+DEBUG: Combining strategy signals...
+DEBUG: Combined strategy signals. Length: 364
+DEBUG: Running backtest...
+DEBUG: Backtest generator created.
+DEBUG: Backtest for combination 1 completed. Performance metrics: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '122.23%', 'Max Drawdown': '-22.37%', 'Buy and Hold Strategy Total Return': '10.27%', 'Final Capital (with commissions)': '22222.80 USD', '--- Trade Statistics ---': '', 'Total Trades': 7, 'Win Rate': '57.14%', 'Profit Factor': '9.17', 'Total Commission Paid': '171.91 USD', 'Average Holding Days': '34.57 days', 'Average Profit per Trade': '1746.11 USD', 'Trade Frequency (per day)': '0.0192'}
+DEBUG: Running backtest for combination 2/3 with params: {'buy_threshold': 3, 'sell_threshold': 0, 'short_sma': 5, 'long_sma': 20, 'buy_score': 2, 'sell_score': -2, 'sma1': 10, 'sma2': 30, 'combo_index': 2}
+DEBUG: Combining strategy signals...
+DEBUG: Combined strategy signals. Length: 364
+DEBUG: Running backtest...
+DEBUG: Backtest generator created.
+DEBUG: Backtest for combination 2 completed. Performance metrics: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '122.23%', 'Max Drawdown': '-22.37%', 'Buy and Hold Strategy Total Return': '10.27%', 'Final Capital (with commissions)': '22222.80 USD', '--- Trade Statistics ---': '', 'Total Trades': 7, 'Win Rate': '57.14%', 'Profit Factor': '9.17', 'Total Commission Paid': '171.91 USD', 'Average Holding Days': '34.57 days', 'Average Profit per Trade': '1746.11 USD', 'Trade Frequency (per day)': '0.0192'}
+DEBUG: Running backtest for combination 3/3 with params: {'buy_threshold': 4, 'sell_threshold': 0, 'short_sma': 5, 'long_sma': 20, 'buy_score': 2, 'sell_score': -2, 'sma1': 10, 'sma2': 30, 'combo_index': 3}
+DEBUG: Combining strategy signals...
+DEBUG: Combined strategy signals. Length: 364
+DEBUG: Running backtest...
+DEBUG: Backtest generator created.
+DEBUG: Backtest for combination 3 completed. Performance metrics: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '106.72%', 'Max Drawdown': '-35.11%', 'Buy and Hold Strategy Total Return': '10.27%', 'Final Capital (with commissions)': '20672.32 USD', '--- Trade Statistics ---': '', 'Total Trades': 8, 'Win Rate': '37.50%', 'Profit Factor': '3.84', 'Total Commission Paid': '185.75 USD', 'Average Holding Days': '32.50 days', 'Average Profit per Trade': '1334.04 USD', 'Trade Frequency (per day)': '0.0220'}
+DEBUG: All backtests completed in hyperparameter search mode. Sorting results.
+我看後臺數據是正確的 但是ui數據都顯示0 只有交易次數 跟策略參數顯示正確
+
+DEBUG: Running backtest for combination 3/3 with params: {'buy_threshold': 4, 'sell_threshold': 0, 'short_sma': 5, 'long_sma': 20, 'buy_score': 2, 'sell_score': -2, 'sma1': 10, 'sma2': 30, 'combo_index': 3}
+DEBUG: Combining strategy signals...
+DEBUG: Combined strategy signals. Length: 364
+DEBUG: Running backtest...
+DEBUG: Backtest generator created.
+DEBUG: Backtest for combination 3 completed. Performance metrics: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '106.72%', 'Max Drawdown': '-35.11%', 'Buy and Hold Strategy Total Return': '10.31%', 'Final Capital (with commissions)': '20672.32 USD', '--- Trade Statistics ---': '', 'Total Trades': 8, 'Win Rate': '37.50%', 'Profit Factor': '3.84', 'Total Commission Paid': '185.75 USD', 'Average Holding Days': '32.50 days', 'Average Profit per Trade': '1334.04 USD', 'Trade Frequency (per day)': '0.0220'}
+DEBUG: All backtests completed in hyperparameter search mode. Sorting results.
+DEBUG: Raw metrics for combo 1: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '122.23%', 'Max Drawdown': '-22.37%', 'Buy and Hold Strategy Total Return': '10.31%', 'Final Capital (with commissions)': '22222.80 USD', '--- Trade Statistics ---': '', 'Total Trades': 7, 'Win Rate': '57.14%', 'Profit Factor': '9.17', 'Total Commission Paid': '171.91 USD', 'Average Holding Days': '34.57 days', 'Average Profit per Trade': '1746.11 USD', 'Trade Frequency (per day)': '0.0192'}
+DEBUG: Extracted and converted values - Total Return: 122.23, Max Drawdown: -22.37, Win Rate: 57.14, Total Trades: 7
+DEBUG: Row data being appended for combo 1: [1, 122.23, 0, -22.37, 0, 0, 57.14, 7, 'BuyThresh: 2, SellThresh: 0', 'ShortSMA: 5, LongSMA: 20', '', '']
+DEBUG: Raw metrics for combo 2: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '122.23%', 'Max Drawdown': '-22.37%', 'Buy and Hold Strategy Total Return': '10.31%', 'Final Capital (with commissions)': '22222.80 USD', '--- Trade Statistics ---': '', 'Total Trades': 7, 'Win Rate': '57.14%', 'Profit Factor': '9.17', 'Total Commission Paid': '171.91 USD', 'Average Holding Days': '34.57 days', 'Average Profit per Trade': '1746.11 USD', 'Trade Frequency (per day)': '0.0192'}
+DEBUG: Extracted and converted values - Total Return: 122.23, Max Drawdown: -22.37, Win Rate: 57.14, Total Trades: 7
+DEBUG: Row data being appended for combo 2: [2, 122.23, 0, -22.37, 0, 0, 57.14, 7, 'BuyThresh: 3, SellThresh: 0', 'ShortSMA: 5, LongSMA: 20', '', '']
+DEBUG: Raw metrics for combo 3: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '106.72%', 'Max Drawdown': '-35.11%', 'Buy and Hold Strategy Total Return': '10.31%', 'Final Capital (with commissions)': '20672.32 USD', '--- Trade Statistics ---': '', 'Total Trades': 8, 'Win Rate': '37.50%', 'Profit Factor': '3.84', 'Total Commission Paid': '185.75 USD', 'Average Holding Days': '32.50 days', 'Average Profit per Trade': '1334.04 USD', 'Trade Frequency (per day)': '0.0220'}
+DEBUG: Extracted and converted values - Total Return: 106.72, Max Drawdown: -35.11, Win Rate: 37.5, Total Trades: 8
+DEBUG: Row data being appended for combo 3: [3, 106.72, 0, -35.11, 0, 0, 37.5, 8, 'BuyThresh: 4, SellThresh: 0', 'ShortSMA: 5, LongSMA: 20', '', '']
+DEBUG: Raw metrics for combo 1: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '122.23%', 'Max Drawdown': '-22.37%', 'Buy and Hold Strategy Total Return': '10.31%', 'Final Capital (with commissions)': '22222.80 USD', '--- Trade Statistics ---': '', 'Total Trades': 7, 'Win Rate': '57.14%', 'Profit Factor': '9.17', 'Total Commission Paid': '171.91 USD', 'Average Holding Days': '34.57 days', 'Average Profit per Trade': '1746.11 USD', 'Trade Frequency (per day)': '0.0192'}
+DEBUG: Extracted and converted values - Total Return: 122.23, Max Drawdown: -22.37, Win Rate: 57.14, Total Trades: 7
+DEBUG: Row data being appended for combo 1: [1, 122.23, 0, -22.37, 0, 0, 57.14, 7, 'BuyThresh: 2, SellThresh: 0', 'ShortSMA: 5, LongSMA: 20', '', '']
+DEBUG: Raw metrics for combo 2: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '122.23%', 'Max Drawdown': '-22.37%', 'Buy and Hold Strategy Total Return': '10.31%', 'Final Capital (with commissions)': '22222.80 USD', '--- Trade Statistics ---': '', 'Total Trades': 7, 'Win Rate': '57.14%', 'Profit Factor': '9.17', 'Total Commission Paid': '171.91 USD', 'Average Holding Days': '34.57 days', 'Average Profit per Trade': '1746.11 USD', 'Trade Frequency (per day)': '0.0192'}
+DEBUG: Extracted and converted values - Total Return: 122.23, Max Drawdown: -22.37, Win Rate: 57.14, Total Trades: 7
+DEBUG: Row data being appended for combo 2: [2, 122.23, 0, -22.37, 0, 0, 57.14, 7, 'BuyThresh: 3, SellThresh: 0', 'ShortSMA: 5, LongSMA: 20', '', '']
+DEBUG: Raw metrics for combo 3: {'Status': 'Processing day 364/364', 'Selected Strategy Total Return (with commissions)': '106.72%', 'Max Drawdown': '-35.11%', 'Buy and Hold Strategy Total Return': '10.31%', 'Final Capital (with commissions)': '20672.32 USD', '--- Trade Statistics ---': '', 'Total Trades': 8, 'Win Rate': '37.50%', 'Profit Factor': '3.84', 'Total Commission Paid': '185.75 USD', 'Average Holding Days': '32.50 days', 'Average Profit per Trade': '1334.04 USD', 'Trade Frequency (per day)': '0.0220'}
+DEBUG: Extracted and converted values - Total Return: 106.72, Max Drawdown: -35.11, Win Rate: 37.5, Total Trades: 8
+DEBUG: Row data being appended for combo 3: [3, 106.72, 0, -35.11, 0, 0, 37.5, 8, 'BuyThresh: 4, SellThresh: 0', 'ShortSMA: 5, LongSMA: 20', '', '']
+
+Traceback (most recent call last):
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\queueing.py", line 626, in process_events
+    response = await route_utils.call_process_api(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\route_utils.py", line 350, in call_process_api
+    output = await app.get_blocks().process_api(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\blocks.py", line 2235, in process_api
+    result = await self.call_function(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\blocks.py", line 1746, in call_function
+    prediction = await anyio.to_thread.run_sync(  # type: ignore
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\anyio\to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\anyio\_backends\_asyncio.py", line 2470, in run_sync_in_worker_thread
+    return await future
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\anyio\_backends\_asyncio.py", line 967, in run
+    result = context.run(func, *args)
+  File "C:\Users\ricky\miniconda3\envs\teethenv\lib\site-packages\gradio\utils.py", line 917, in wrapper
+    response = f(*args, **kwargs)
+  File "C:\Users\ricky\Desktop\coin\Crypto_Selection_Strategy_Based_on_Developer_Activity\GitHubDevelopmentActivityTracker.py", line 501, in display_selected_hyperparameter_result
+    for result in results_generator:
+  File "C:\Users\ricky\Desktop\coin\Crypto_Selection_Strategy_Based_on_Developer_Activity\app_logic.py", line 107, in analyze_crypto_activity
+    price_series = get_crypto_prices(binance_symbol_to_use, config.DEFAULT_CRYPTO_CURRENCY, start_dt, end_dt)
+  File "C:\Users\ricky\Desktop\coin\Crypto_Selection_Strategy_Based_on_Developer_Activity\data_fetcher.py", line 75, in get_crypto_prices
+    start_timestamp_ms = int(start_date.timestamp() * 1000)
+AttributeError: 'DateTime' object has no attribute 'timestamp'
+
+DEBUG: Extracted and converted values - Total Return: 106.72, Annualized Return: 144.07, Max Drawdown: -35.11, Sharpe: 2.49, Sortino: 3.74, Win Rate: 37.5, Total Trades: 8
+DEBUG: Row data being appended for combo 3: [3, 106.72, 144.07, -35.11, 2.49, 3.74, 37.5, 8, 'BuyThresh: 4, SellThresh: 0', 'ShortSMA: 5, LongSMA: 20', '', '']
+DEBUG: analyze_crypto_activity function entered.
+DEBUG: Received start_date_input: <gradio.components.datetime.DateTime object at 0x000001FE42D9C250>, type: <class 'gradio.components.datetime.DateTime'>
+DEBUG: Received end_date_input: <gradio.components.datetime.DateTime object at 0x000001FE42D9C1C0>, type: <class 'gradio.components.datetime.DateTime'>
+DEBUG: Using start_dt: 2024-07-22 23:41:48, end_dt: 2025-07-21 23:41:48
+  File "C:\Users\ricky\Desktop\coin\Crypto_Selection_Strategy_Based_on_Developer_Activity\data_fetcher.py", line 75, in get_crypto_prices
+    start_timestamp_ms = int(start_date.timestamp() * 1000)
+AttributeError: 'str' object has no attribute 'timestamp'
+
+
+當我跑完超參數回測 點一筆回測數據去看的時候出現
+  File "C:\Users\ricky\Desktop\coin\Crypto_Selection_Strategy_Based_on_Developer_Activity\GitHubDevelopmentActivityTracker.py", line 501, in display_selected_hyperparameter_result
+    for result in results_generator:
+  File "C:\Users\ricky\Desktop\coin\Crypto_Selection_Strategy_Based_on_Developer_Activity\app_logic.py", line 581, in analyze_crypto_activity
+    yield generate_ui_output(final_results, is_hyperparameter_search_mode=False, strategy_choice=strategy_choice, price_series_aligned=price_series_aligned, commit_counts_for_plot=commit_counts_for_plot)
+  File "C:\Users\ricky\Desktop\coin\Crypto_Selection_Strategy_Based_on_Developer_Activity\app_logic.py", line 332, in generate_ui_output
+    cumulative_returns_wc, buy_and_hold_returns_plot, buy_points, sell_points, performance_metrics, trades_info_raw = results
+ValueError: too many values to unpack (expected 6)
+
+
+正常了但是當我點擊一筆回測紀錄的時候
+Strategy Performance Metrics和Trade Log也要顯示喔
+
+Hyperparameter Search Results是不是點了一筆Results查看後Hyperparameter Search Results就會消失

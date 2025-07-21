@@ -108,10 +108,22 @@ with gr.Blocks() as demo:
                 interactive=True, 
                 visible=False
             )
+            buy_threshold_range_input = gr.Textbox(
+                label="Buy Commit Threshold (Range/List)", 
+                placeholder="e.g., 50,60,70 or 50-70-5",
+                interactive=True, 
+                visible=False
+            )
             sell_threshold_input = gr.Number(
                 label="Sell Commit Threshold", 
                 value=10,
                 info="Sell when daily commits fall below or equal to this value",
+                interactive=True, 
+                visible=False
+            )
+            sell_threshold_range_input = gr.Textbox(
+                label="Sell Commit Threshold (Range/List)", 
+                placeholder="e.g., 10,20,30 or 10-30-5",
                 interactive=True, 
                 visible=False
             )
@@ -122,10 +134,22 @@ with gr.Blocks() as demo:
                 interactive=True,
                 visible=False
             )
+            short_sma_period_range_input = gr.Textbox( 
+                label="Short Commit SMA Period (Range/List)",
+                placeholder="e.g., 5,10,15 or 5-15-1",
+                interactive=True,
+                visible=False
+            )
             long_sma_period_input = gr.Number( 
                 label="Long Commit SMA Period",
                 value=10,
                 info="Period (days) for calculating long-term Simple Moving Average",
+                interactive=True,
+                visible=False
+            )
+            long_sma_period_range_input = gr.Textbox( 
+                label="Long Commit SMA Period (Range/List)",
+                placeholder="e.g., 10,20,30 or 10-30-5",
                 interactive=True,
                 visible=False
             )
@@ -136,10 +160,22 @@ with gr.Blocks() as demo:
                 interactive=True, 
                 visible=False
             )
+            buy_score_threshold_range_input = gr.Textbox(
+                label="Buy Score Threshold (Range/List)", 
+                placeholder="e.g., 1,2,3 or 1-3-1",
+                interactive=True, 
+                visible=False
+            )
             sell_score_threshold_input = gr.Number(
                 label="Sell Score Threshold", 
                 value=-2,
                 info="Sell when daily commit analysis score falls below or equal to this value",
+                interactive=True, 
+                visible=False
+            )
+            sell_score_threshold_range_input = gr.Textbox(
+                label="Sell Score Threshold (Range/List)", 
+                placeholder="e.g., -1,-2,-3 or -1--3--1",
                 interactive=True, 
                 visible=False
             )
@@ -150,10 +186,22 @@ with gr.Blocks() as demo:
                 interactive=True,
                 visible=False
             )
+            sma1_period_range_input = gr.Textbox(
+                label="SMA1 Period (Range/List)",
+                placeholder="e.g., 5,10,15 or 5-15-5",
+                interactive=True,
+                visible=False
+            )
             sma2_period_input = gr.Number(
                 label="SMA2 Period (longer)",
                 value=30,
                 info="Period (days) for the longer Simple Moving Average",
+                interactive=True,
+                visible=False
+            )
+            sma2_period_range_input = gr.Textbox(
+                label="SMA2 Period (Range/List)",
+                placeholder="e.g., 20,30,40 or 20-40-10",
                 interactive=True,
                 visible=False
             )
@@ -171,6 +219,13 @@ with gr.Blocks() as demo:
                 interactive=True,
                 info="Show backtesting results in real-time. Disable for faster final results."
             )
+            
+            hyperparameter_search_mode = gr.Checkbox(
+                label="Enable Hyperparameter Search Mode",
+                value=False,
+                interactive=True,
+                info="If enabled, strategy parameters can be entered as ranges (e.g., '5,10,15' or '5-15-5')."
+            )
 
             analyze_button = gr.Button("Analyze and Generate Charts")
             output_terminal_log = gr.Textbox(label="Backend Log", interactive=False, lines=5, autoscroll=True, max_lines=10)
@@ -178,7 +233,7 @@ with gr.Blocks() as demo:
         with gr.Column():
             output_plot_price_commits = gr.Plot(label="Price Trend vs. GitHub Commit Count (with Buy/Sell Points)")
             output_plot_returns = gr.Plot(label="Strategy Cumulative Return Curve")
-            output_performance_metrics = gr.Textbox(label="Strategy Performance Metrics", interactive=False)
+            output_performance_metrics = gr.Textbox(label="Strategy Performance Metrics", interactive=False, lines=10, max_lines=20)
             output_message = gr.Textbox(label="Status/Message", interactive=False)
             output_trade_log = gr.Dataframe(
                 headers=["時間", "幣種", "買進價格", "賣出價格", "買進時間", "賣出時間", "持有時間", "利潤", "利潤%數", "當前總資產", "當前總報酬率%數"],
@@ -187,6 +242,18 @@ with gr.Blocks() as demo:
                 wrap=True,
                 interactive=False,
                 label="Trade Log"
+            )
+            output_hyperparameter_results = gr.Dataframe(
+                headers=[
+                    "組合", "總報酬率(%)", "年化報酬率(%)", "最大回撤(%)", "夏普比率", "索提諾比率", "勝率(%)", "總交易次數",
+                    "Simple Commit Threshold Params", "Commit SMA Params", "LLM Commit Analysis Params", "Simple SMA Params"
+                ],
+                row_count=10, # Display more rows for results
+                col_count=12, # Number of columns
+                wrap=True,
+                interactive=False,
+                label="Hyperparameter Search Results",
+                visible=False # Initially hidden
             )
 
     # Function to toggle visibility of manual input fields and pre-fill if predefined
@@ -215,42 +282,103 @@ with gr.Blocks() as demo:
     start_date_picker.change(lambda x: x, inputs=start_date_picker, outputs=start_date_picker)
     end_date_picker.change(lambda x: x, inputs=end_date_picker, outputs=end_date_picker)
 
-    # Function to toggle visibility of strategy parameters
-    def toggle_strategy_params_visibility(strategy_choice_values):
-        buy_thresh_vis = False
-        sell_thresh_vis = False
-        short_sma_vis = False
-        long_sma_vis = False
-        buy_score_vis = False
-        sell_score_vis = False
-        sma_periods_vis = False
+    # Function to toggle visibility of strategy parameters and output displays
+    def toggle_strategy_params_visibility(strategy_choice_values, is_hyperparameter_search_mode):
+        # Simple Commit Threshold Strategy
+        buy_thresh_single_vis = False
+        buy_thresh_range_vis = False
+        sell_thresh_single_vis = False
+        sell_thresh_range_vis = False
+
+        # Commit SMA Strategy
+        short_sma_single_vis = False
+        short_sma_range_vis = False
+        long_sma_single_vis = False
+        long_sma_range_vis = False
+
+        # LLM Commit Analysis Strategy
+        buy_score_single_vis = False
+        buy_score_range_vis = False
+        sell_score_single_vis = False
+        sell_score_range_vis = False
+
+        # Simple SMA Strategy
+        sma1_period_single_vis = False
+        sma1_period_range_vis = False
+        sma2_period_single_vis = False
+        sma2_period_range_vis = False
+
+        # Output visibility
+        plots_visible = not is_hyperparameter_search_mode
+        trade_log_visible = not is_hyperparameter_search_mode
+        hyperparameter_results_visible = is_hyperparameter_search_mode
 
         for strategy_choice_value in strategy_choice_values:
             if strategy_choice_value == "Simple Commit Threshold Strategy":
-                buy_thresh_vis = True
-                sell_thresh_vis = True
+                if is_hyperparameter_search_mode:
+                    buy_thresh_range_vis = True
+                    sell_thresh_range_vis = True
+                else:
+                    buy_thresh_single_vis = True
+                    sell_thresh_single_vis = True
             elif strategy_choice_value == "Commit SMA Strategy":
-                short_sma_vis = True
-                long_sma_vis = True
+                if is_hyperparameter_search_mode:
+                    short_sma_range_vis = True
+                    long_sma_range_vis = True
+                else:
+                    short_sma_single_vis = True
+                    long_sma_single_vis = True
             elif strategy_choice_value == "LLM Commit Analysis Strategy":
-                buy_score_vis = True
-                sell_score_vis = True
+                if is_hyperparameter_search_mode:
+                    buy_score_range_vis = True
+                    sell_score_range_vis = True
+                else:
+                    buy_score_single_vis = True
+                    sell_score_single_vis = True
             elif strategy_choice_value == "Simple SMA Strategy":
-                sma_periods_vis = True
+                if is_hyperparameter_search_mode:
+                    sma1_period_range_vis = True
+                    sma2_period_range_vis = True
+                else:
+                    sma1_period_single_vis = True
+                    sma2_period_single_vis = True
         
-        return (gr.update(visible=buy_thresh_vis), 
-                gr.update(visible=sell_thresh_vis), 
-                gr.update(visible=short_sma_vis), 
-                gr.update(visible=long_sma_vis),
-                gr.update(visible=buy_score_vis),
-                gr.update(visible=sell_score_vis),
-                gr.update(visible=sma_periods_vis),
-                gr.update(visible=sma_periods_vis))
+        return (gr.update(visible=buy_thresh_single_vis), gr.update(visible=buy_thresh_range_vis),
+                gr.update(visible=sell_thresh_single_vis), gr.update(visible=sell_thresh_range_vis),
+                gr.update(visible=short_sma_single_vis), gr.update(visible=short_sma_range_vis),
+                gr.update(visible=long_sma_single_vis), gr.update(visible=long_sma_range_vis),
+                gr.update(visible=buy_score_single_vis), gr.update(visible=buy_score_range_vis),
+                gr.update(visible=sell_score_single_vis), gr.update(visible=sell_score_range_vis),
+                gr.update(visible=sma1_period_single_vis), gr.update(visible=sma1_period_range_vis),
+                gr.update(visible=sma2_period_single_vis), gr.update(visible=sma2_period_range_vis),
+                gr.update(visible=plots_visible), gr.update(visible=plots_visible), gr.update(visible=plots_visible), gr.update(visible=trade_log_visible), gr.update(visible=hyperparameter_results_visible))
 
     strategy_choice.change(
         toggle_strategy_params_visibility,
-        inputs=strategy_choice,
-        outputs=[buy_threshold_input, sell_threshold_input, short_sma_period_input, long_sma_period_input, buy_score_threshold_input, sell_score_threshold_input, sma1_period_input, sma2_period_input]
+        inputs=[strategy_choice, hyperparameter_search_mode],
+        outputs=[buy_threshold_input, buy_threshold_range_input, 
+                 sell_threshold_input, sell_threshold_range_input,
+                 short_sma_period_input, short_sma_period_range_input, 
+                 long_sma_period_input, long_sma_period_range_input,
+                 buy_score_threshold_input, buy_score_threshold_range_input, 
+                 sell_score_threshold_input, sell_score_threshold_range_input,
+                 sma1_period_input, sma1_period_range_input, 
+                 sma2_period_input, sma2_period_range_input,
+                 output_plot_price_commits, output_plot_returns, output_performance_metrics, output_trade_log, output_hyperparameter_results]
+    )
+
+    hyperparameter_search_mode.change(
+        toggle_strategy_params_visibility,
+        inputs=[strategy_choice, hyperparameter_search_mode],
+        outputs=[buy_threshold_input, buy_threshold_range_input, 
+                 sell_threshold_input, sell_threshold_range_input,
+                 short_sma_period_input, short_sma_period_range_input, 
+                 long_sma_period_input, long_sma_period_range_input,
+                 buy_score_threshold_input, buy_score_threshold_range_input, 
+                 sell_score_threshold_input, sell_score_threshold_range_input,
+                 sma1_period_input, sma1_period_range_input, 
+                 sma2_period_input, sma2_period_range_input,
+                 output_plot_price_commits, output_plot_returns, output_performance_metrics, output_trade_log, output_hyperparameter_results]
     )
 
     analyze_button.click(
@@ -258,12 +386,18 @@ with gr.Blocks() as demo:
         inputs=[
             crypto_choice, manual_coingecko_id, manual_github_owner, manual_github_repo,
             start_date_picker, end_date_picker,
-            strategy_choice, buy_logic, sell_logic, buy_combination_mode, sell_combination_mode, buy_threshold_input, sell_threshold_input, 
-            short_sma_period_input, long_sma_period_input,
-            buy_score_threshold_input, sell_score_threshold_input,
-            sma1_period_input, sma2_period_input,
+            strategy_choice, buy_logic, sell_logic, buy_combination_mode, sell_combination_mode, 
+            buy_threshold_input, buy_threshold_range_input, 
+            sell_threshold_input, sell_threshold_range_input, 
+            short_sma_period_input, short_sma_period_range_input, 
+            long_sma_period_input, long_sma_period_range_input,
+            buy_score_threshold_input, buy_score_threshold_range_input, 
+            sell_score_threshold_input, sell_score_threshold_range_input,
+            sma1_period_input, sma1_period_range_input, 
+            sma2_period_input, sma2_period_range_input,
             apply_commission_checkbox,
-            dynamic_updates_checkbox
+            dynamic_updates_checkbox,
+            hyperparameter_search_mode
         ],
         outputs=[
             output_plot_price_commits,
@@ -271,9 +405,131 @@ with gr.Blocks() as demo:
             output_performance_metrics,
             output_message,
             output_terminal_log,
-            output_trade_log
+            output_trade_log,
+            output_hyperparameter_results
         ],
         show_progress='full'
+    )
+
+    def display_selected_hyperparameter_result(evt: gr.SelectData,
+                                               crypto_selection, manual_binance_symbol, manual_owner, manual_repo,
+                                               start_date_input, end_date_input,
+                                               strategy_choice, buy_logic, sell_logic, buy_combination_mode, sell_combination_mode,
+                                               buy_threshold_input, sell_threshold_input,
+                                               short_sma_period_input, long_sma_period_input,
+                                               buy_score_threshold_input, sell_score_threshold_input,
+                                               sma1_period_input, sma2_period_input,
+                                               apply_commission_to_plot, enable_dynamic_updates,
+                                               hyperparameter_results_data): # Added hyperparameter_results_data as input
+        
+        row_index = evt.index[0] # Get the row index from evt.index
+        selected_row_data = hyperparameter_results_data.iloc[row_index] # Get the selected row data from the full data
+
+        # Extract parameters from the selected row data
+        # The order of columns in output_hyperparameter_results is:
+        # "組合", "總報酬率(%)", "年化報酬率(%)", "最大回撤(%)", "夏普比率", "索提諾比率", "勝率(%)", "總交易次數",
+        # "Simple Commit Threshold Params", "Commit SMA Params", "LLM Commit Analysis Params", "Simple SMA Params"
+        
+        # Default values for parameters (if not present in the selected strategy)
+        current_buy_threshold = buy_threshold_input
+        current_sell_threshold = sell_threshold_input
+        current_short_sma = short_sma_period_input
+        current_long_sma = long_sma_period_input
+        current_buy_score = buy_score_threshold_input
+        current_sell_score = sell_score_threshold_input
+        current_sma1 = sma1_period_input
+        current_sma2 = sma2_period_input
+
+        # Parse Simple Commit Threshold Params
+        simple_commit_params_str = selected_row_data[8] # Index 8 for "Simple Commit Threshold Params"
+        if simple_commit_params_str:
+            parts = simple_commit_params_str.split(', ')
+            for part in parts:
+                if part.startswith("BuyThresh:"):
+                    current_buy_threshold = int(part.split(': ')[1])
+                elif part.startswith("SellThresh:"):
+                    current_sell_threshold = int(part.split(': ')[1])
+
+        # Parse Commit SMA Params
+        commit_sma_params_str = selected_row_data[9] # Index 9 for "Commit SMA Params"
+        if commit_sma_params_str:
+            parts = commit_sma_params_str.split(', ')
+            for part in parts:
+                if part.startswith("ShortSMA:"):
+                    current_short_sma = int(part.split(': ')[1])
+                elif part.startswith("LongSMA:"):
+                    current_long_sma = int(part.split(': ')[1])
+
+        # Parse LLM Commit Analysis Params
+        llm_params_str = selected_row_data[10] # Index 10 for "LLM Commit Analysis Params"
+        if llm_params_str:
+            parts = llm_params_str.split(', ')
+            for part in parts:
+                if part.startswith("BuyScore:"):
+                    current_buy_score = int(part.split(': ')[1])
+                elif part.startswith("SellScore:"):
+                    current_sell_score = int(part.split(': ')[1])
+
+        # Parse Simple SMA Params
+        simple_sma_params_str = selected_row_data[11] # Index 11 for "Simple SMA Params"
+        if simple_sma_params_str:
+            parts = simple_sma_params_str.split(', ')
+            for part in parts:
+                if part.startswith("SMA1:"):
+                    current_sma1 = int(part.split(': ')[1])
+                elif part.startswith("SMA2:"):
+                    current_sma2 = int(part.split(': ')[1])
+
+        # Now call analyze_crypto_activity with the extracted parameters and hyperparameter_search_mode=False
+        results_generator = analyze_crypto_activity(
+            crypto_selection, manual_binance_symbol, manual_owner, manual_repo,
+            start_date_input, end_date_input,
+            strategy_choice, buy_logic, sell_logic, buy_combination_mode, sell_combination_mode,
+            current_buy_threshold, "", # Pass single value, empty string for range
+            current_sell_threshold, "",
+            current_short_sma, "",
+            current_long_sma, "",
+            current_buy_score, "",
+            current_sell_score, "",
+            current_sma1, "",
+            current_sma2, "",
+            apply_commission_to_plot, enable_dynamic_updates, False # hyperparameter_search_mode = False
+        )
+        
+        # Iterate through the generator to get the final result
+        final_results = None
+        for result in results_generator:
+            final_results = result
+            
+        fig1, fig2, performance_text, status_message, terminal_log, trades_info_formatted, _ = final_results
+        
+        print(f"DEBUG: Type of fig1: {type(fig1)}")
+        print(f"DEBUG: Type of fig2: {type(fig2)}")
+        # Make plots and trade log visible, hide hyperparameter results
+        return (gr.update(value=fig1, visible=True), gr.update(value=fig2, visible=True), gr.update(value=performance_text, visible=True), gr.update(value=status_message), gr.update(value=terminal_log), gr.update(value=trades_info_formatted, visible=True), gr.update(visible=True))
+
+    output_hyperparameter_results.select(
+        display_selected_hyperparameter_result,
+        inputs=[
+            crypto_choice, manual_coingecko_id, manual_github_owner, manual_github_repo,
+            start_date_picker, end_date_picker,
+            strategy_choice, buy_logic, sell_logic, buy_combination_mode, sell_combination_mode,
+            buy_threshold_input, sell_threshold_input,
+            short_sma_period_input, long_sma_period_input,
+            buy_score_threshold_input, sell_score_threshold_input,
+            sma1_period_input, sma2_period_input,
+            apply_commission_checkbox, dynamic_updates_checkbox,
+            output_hyperparameter_results # Add the dataframe itself as an input
+        ],
+        outputs=[
+            output_plot_price_commits,
+            output_plot_returns,
+            output_performance_metrics,
+            output_message,
+            output_terminal_log,
+            output_trade_log,
+            output_hyperparameter_results
+        ]
     )
 
 demo.launch(server_name="0.0.0.0", server_port=10000)

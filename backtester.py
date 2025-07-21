@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 def run_backtest(price_series, signals, initial_capital, commission_rate, currency):
     """
@@ -139,10 +140,42 @@ def run_backtest(price_series, signals, initial_capital, commission_rate, curren
         average_profit_per_trade = sum(t['利潤'] for t in trades_info) / total_trades if total_trades > 0 else 0
         trade_frequency = total_trades / len(price_series) # Trades per day
 
+        # Calculate daily returns for the strategy
+        daily_returns = cumulative_returns_wc.pct_change().dropna()
+
+        annualized_return = 0.0
+        annualized_volatility = 0.0
+        sharpe_ratio = 0.0
+        sortino_ratio = 0.0
+
+        if not daily_returns.empty:
+            # Annualized Return
+            # Assuming 252 trading days in a year for stocks, but for crypto, it's 365 days
+            days_in_year = 365
+            annualized_return = (1 + daily_returns.mean())**days_in_year - 1
+
+            # Annualized Volatility (Standard Deviation)
+            annualized_volatility = daily_returns.std() * np.sqrt(days_in_year)
+
+            # Sharpe Ratio (assuming risk-free rate is 0 for simplicity)
+            if annualized_volatility != 0:
+                sharpe_ratio = annualized_return / annualized_volatility
+            
+            # Sortino Ratio
+            # Calculate downside deviation
+            downside_returns = daily_returns[daily_returns < 0]
+            if not downside_returns.empty:
+                downside_deviation = downside_returns.std() * np.sqrt(days_in_year)
+                if downside_deviation != 0:
+                    sortino_ratio = annualized_return / downside_deviation
+            
         performance_metrics = {
             "Status": f"Processing day {i+1}/{len(price_series)}",
             "Selected Strategy Total Return (with commissions)": f"{total_return_wc:.2f}%",
+            "Annualized Return (%)": f"{annualized_return * 100:.2f}%",
             "Max Drawdown": f"{max_drawdown_wc:.2f}%",
+            "Sharpe Ratio": f"{sharpe_ratio:.2f}",
+            "Sortino Ratio": f"{sortino_ratio:.2f}",
             "Buy and Hold Strategy Total Return": f"{buy_and_hold_return:.2f}%",
             "Final Capital (with commissions)": f"{portfolio_snapshot_wc.iloc[-1]:.2f} {currency.upper()}",
             "--- Trade Statistics ---": "",
