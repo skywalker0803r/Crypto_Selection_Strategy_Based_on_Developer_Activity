@@ -63,6 +63,7 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
                             sell_score_threshold_input, sell_score_threshold_range_input,
                             sma1_period_input, sma1_period_range_input, 
                             sma2_period_input, sma2_period_range_input,
+                            ic_ir_prediction_horizon_input, ic_ir_prediction_horizon_range_input,
                             apply_commission_to_plot, enable_dynamic_updates, hyperparameter_search_mode, progress=gr.Progress(track_tqdm=True)):
     print("DEBUG: analyze_crypto_activity function entered.")
     # Capture stdout/stderr
@@ -318,10 +319,13 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
                         sortino_ratio,
                         win_rate,
                         total_trades,
+                        metrics.get("IC", 0.0), # Add IC
+                        metrics.get("IR", 0.0), # Add IR
                         f"BuyThresh: {params['buy_threshold']}, SellThresh: {params['sell_threshold']}" if "Simple Commit Threshold Strategy" in strategy_choice else "",
                         f"ShortSMA: {params['short_sma']}, LongSMA: {params['long_sma']}" if "Commit SMA Strategy" in strategy_choice else "",
                         f"BuyScore: {params['buy_score']}, SellScore: {params['sell_score']}" if "LLM Commit Analysis Strategy" in strategy_choice else "",
-                        f"SMA1: {params['sma1']}, SMA2: {params['sma2']}" if "Simple SMA Strategy" in strategy_choice else ""
+                        f"SMA1: {params['sma1']}, SMA2: {params['sma2']}" if "Simple SMA Strategy" in strategy_choice else "",
+                        f"N: {params['ic_ir_prediction_horizon']}"
                     ]
                     print(f"DEBUG: Row data being appended for combo {params.get('combo_index', '')}: {row}")
                     results_table_data.append(row)
@@ -369,7 +373,9 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
                 ax_ret.legend()
                 fig2.tight_layout()
 
-                performance_text = "\n".join([f"{k}: {v}" for k, v in performance_metrics.items()])        
+                performance_text = "\n".join([f"{k}: {v}" for k, v in performance_metrics.items()])
+                performance_text += f"\nIC: {performance_metrics.get('IC', 'N/A')}"                
+                performance_text += f"\nIR: {performance_metrics.get('IR', 'N/A')}"
                 return fig1, fig2, performance_text, performance_metrics.get("Status", "Running..."), redirected_output_capture.getvalue(), trades_info_formatted, None
 
         # Determine which parameters to use based on hyperparameter_search_mode
@@ -386,6 +392,7 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
             sell_score_values = parse_parameter_input(sell_score_threshold_range_input, "Sell Score Threshold") if "LLM Commit Analysis Strategy" in strategy_choice else [sell_score_threshold_input]
             sma1_values = parse_parameter_input(sma1_period_range_input, "SMA1 Period") if "Simple SMA Strategy" in strategy_choice else [sma1_period_input]
             sma2_values = parse_parameter_input(sma2_period_range_input, "SMA2 Period") if "Simple SMA Strategy" in strategy_choice else [sma2_period_input]
+            ic_ir_prediction_horizon_values = parse_parameter_input(ic_ir_prediction_horizon_range_input, "IC/IR Prediction Horizon") if ic_ir_prediction_horizon_range_input else [ic_ir_prediction_horizon_input]
 
             print(f"DEBUG: Length of buy_threshold_values: {len(buy_threshold_values)}")
             print(f"DEBUG: Length of sell_threshold_values: {len(sell_threshold_values)}")
@@ -395,6 +402,7 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
             print(f"DEBUG: Length of sell_score_values: {len(sell_score_values)}")
             print(f"DEBUG: Length of sma1_values: {len(sma1_values)}")
             print(f"DEBUG: Length of sma2_values: {len(sma2_values)}")
+            print(f"DEBUG: Length of ic_ir_prediction_horizon_values: {len(ic_ir_prediction_horizon_values)}")
 
             print(f"DEBUG: buy_threshold_values: {buy_threshold_values}")
             print(f"DEBUG: sell_threshold_values: {sell_threshold_values}")
@@ -404,13 +412,15 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
             print(f"DEBUG: sell_score_values: {sell_score_values}")
             print(f"DEBUG: sma1_values: {sma1_values}")
             print(f"DEBUG: sma2_values: {sma2_values}")
+            print(f"DEBUG: ic_ir_prediction_horizon_values: {ic_ir_prediction_horizon_values}")
 
             # Generate all combinations
             param_combinations = list(itertools.product(
                 buy_threshold_values, sell_threshold_values,
                 short_sma_values, long_sma_values,
                 buy_score_values, sell_score_values,
-                sma1_values, sma2_values
+                sma1_values, sma2_values,
+                ic_ir_prediction_horizon_values
             ))
 
             for i, combo in enumerate(param_combinations):
@@ -423,6 +433,7 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
                     "sell_score": combo[5],
                     "sma1": combo[6],
                     "sma2": combo[7],
+                    "ic_ir_prediction_horizon": combo[8],
                     "combo_index": i + 1 # For display purposes
                 })
             print(f"DEBUG: Generated {len(param_configs)} hyperparameter combinations.")
@@ -441,6 +452,7 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
                 "sell_score": sell_score_threshold_input,
                 "sma1": sma1_period_input,
                 "sma2": sma2_period_input,
+                "ic_ir_prediction_horizon": ic_ir_prediction_horizon_input,
                 "combo_index": 1
             })
 
@@ -489,11 +501,11 @@ def analyze_crypto_activity(crypto_selection, manual_binance_symbol, manual_owne
 
                 # Combine signals based on selected logic
                 print("DEBUG: Combining strategy signals...")
-                final_strategy_signals = combine_strategy_signals(all_strategy_signals, buy_logic, sell_logic, all_strategy_holdings, buy_combination_mode, sell_combination_mode)
-                print(f"DEBUG: Combined strategy signals. Length: {len(final_strategy_signals)}")
+            final_strategy_signals = combine_strategy_signals(all_strategy_signals, buy_logic, sell_logic, all_strategy_holdings, buy_combination_mode, sell_combination_mode)
+            print(f"DEBUG: Combined strategy signals. Length: {len(final_strategy_signals)}")
 
             print("DEBUG: Running backtest...")
-            backtest_generator = run_backtest(price_series_aligned, final_strategy_signals, config.INITIAL_CAPITAL, config.COMMISSION_RATE, config.DEFAULT_CRYPTO_CURRENCY)
+            backtest_generator = run_backtest(price_series_aligned, final_strategy_signals, config.INITIAL_CAPITAL, config.COMMISSION_RATE, config.DEFAULT_CRYPTO_CURRENCY, params["ic_ir_prediction_horizon"])
             print("DEBUG: Backtest generator created.")
 
             # Run backtest to completion for each combination

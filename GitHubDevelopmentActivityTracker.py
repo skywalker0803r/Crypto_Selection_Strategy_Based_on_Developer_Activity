@@ -73,8 +73,8 @@ with gr.Blocks() as demo:
             gr.Markdown("### Strategy Backtesting Settings")
             strategy_choice = gr.CheckboxGroup(
                 label="Select Backtesting Strategy(ies)",
-                choices=["No Strategy", "Simple Commit Threshold Strategy", "Commit SMA Strategy", "LLM Commit Analysis Strategy", "Simple SMA Strategy"], 
-                value=["No Strategy"], # Default to No Strategy
+                choices=["Simple Commit Threshold Strategy", "Commit SMA Strategy", "LLM Commit Analysis Strategy", "Simple SMA Strategy"], 
+                value=[], # Default to no strategy selected
                 interactive=True
             )
             buy_logic = gr.Radio(
@@ -206,6 +206,19 @@ with gr.Blocks() as demo:
                 visible=False
             )
 
+            ic_ir_prediction_horizon_input = gr.Number(
+                label="IC/IR Prediction Horizon (N days)",
+                value=7,
+                info="Number of days into the future for IC/IR calculation (N)",
+                interactive=True
+            )
+            ic_ir_prediction_horizon_range_input = gr.Textbox(
+                label="IC/IR Prediction Horizon (N days) (Range/List)",
+                placeholder="e.g., 5,7,10 or 5-15-1",
+                interactive=True,
+                visible=False
+            )
+
             apply_commission_checkbox = gr.Checkbox(
                 label="Apply Commissions to Strategy Return Curve",
                 value=True,
@@ -246,10 +259,11 @@ with gr.Blocks() as demo:
             output_hyperparameter_results = gr.Dataframe(
                 headers=[
                     "組合", "總報酬率(%)", "年化報酬率(%)", "最大回撤(%)", "夏普比率", "索提諾比率", "勝率(%)", "總交易次數",
-                    "Simple Commit Threshold Params", "Commit SMA Params", "LLM Commit Analysis Params", "Simple SMA Params"
+                    "IC", "IR",
+                    "Simple Commit Threshold Params", "Commit SMA Params", "LLM Commit Analysis Params", "Simple SMA Params", "IC/IR Prediction Horizon"
                 ],
                 row_count=10, # Display more rows for results
-                col_count=12, # Number of columns
+                col_count=15, # Number of columns
                 wrap=True,
                 interactive=False,
                 label="Hyperparameter Search Results",
@@ -308,6 +322,10 @@ with gr.Blocks() as demo:
         sma2_period_single_vis = False
         sma2_period_range_vis = False
 
+        # IC/IR Prediction Horizon
+        ic_ir_single_vis = False
+        ic_ir_range_vis = False
+
         # Output visibility
         plots_visible = not is_hyperparameter_search_mode
         trade_log_visible = not is_hyperparameter_search_mode
@@ -343,6 +361,11 @@ with gr.Blocks() as demo:
                     sma1_period_single_vis = True
                     sma2_period_single_vis = True
         
+        if is_hyperparameter_search_mode:
+            ic_ir_range_vis = True
+        else:
+            ic_ir_single_vis = True
+
         return (gr.update(visible=buy_thresh_single_vis), gr.update(visible=buy_thresh_range_vis),
                 gr.update(visible=sell_thresh_single_vis), gr.update(visible=sell_thresh_range_vis),
                 gr.update(visible=short_sma_single_vis), gr.update(visible=short_sma_range_vis),
@@ -351,6 +374,7 @@ with gr.Blocks() as demo:
                 gr.update(visible=sell_score_single_vis), gr.update(visible=sell_score_range_vis),
                 gr.update(visible=sma1_period_single_vis), gr.update(visible=sma1_period_range_vis),
                 gr.update(visible=sma2_period_single_vis), gr.update(visible=sma2_period_range_vis),
+                gr.update(visible=ic_ir_single_vis), gr.update(visible=ic_ir_range_vis),
                 gr.update(visible=plots_visible), gr.update(visible=plots_visible), gr.update(visible=plots_visible), gr.update(visible=trade_log_visible), gr.update(visible=hyperparameter_results_visible))
 
     strategy_choice.change(
@@ -364,6 +388,7 @@ with gr.Blocks() as demo:
                  sell_score_threshold_input, sell_score_threshold_range_input,
                  sma1_period_input, sma1_period_range_input, 
                  sma2_period_input, sma2_period_range_input,
+                 ic_ir_prediction_horizon_input, ic_ir_prediction_horizon_range_input,
                  output_plot_price_commits, output_plot_returns, output_performance_metrics, output_trade_log, output_hyperparameter_results]
     )
 
@@ -378,6 +403,7 @@ with gr.Blocks() as demo:
                  sell_score_threshold_input, sell_score_threshold_range_input,
                  sma1_period_input, sma1_period_range_input, 
                  sma2_period_input, sma2_period_range_input,
+                 ic_ir_prediction_horizon_input, ic_ir_prediction_horizon_range_input,
                  output_plot_price_commits, output_plot_returns, output_performance_metrics, output_trade_log, output_hyperparameter_results]
     )
 
@@ -395,6 +421,7 @@ with gr.Blocks() as demo:
             sell_score_threshold_input, sell_score_threshold_range_input,
             sma1_period_input, sma1_period_range_input, 
             sma2_period_input, sma2_period_range_input,
+            ic_ir_prediction_horizon_input, ic_ir_prediction_horizon_range_input,
             apply_commission_checkbox,
             dynamic_updates_checkbox,
             hyperparameter_search_mode
@@ -419,6 +446,7 @@ with gr.Blocks() as demo:
                                                short_sma_period_input, long_sma_period_input,
                                                buy_score_threshold_input, sell_score_threshold_input,
                                                sma1_period_input, sma2_period_input,
+                                               ic_ir_prediction_horizon_input,
                                                apply_commission_to_plot, enable_dynamic_updates,
                                                hyperparameter_results_data): # Added hyperparameter_results_data as input
         
@@ -439,6 +467,7 @@ with gr.Blocks() as demo:
         current_sell_score = sell_score_threshold_input
         current_sma1 = sma1_period_input
         current_sma2 = sma2_period_input
+        current_ic_ir_prediction_horizon = ic_ir_prediction_horizon_input
 
         # Parse Simple Commit Threshold Params
         simple_commit_params_str = selected_row_data[8] # Index 8 for "Simple Commit Threshold Params"
@@ -480,6 +509,22 @@ with gr.Blocks() as demo:
                 elif part.startswith("SMA2:"):
                     current_sma2 = int(part.split(': ')[1])
 
+        # Parse IC/IR Prediction Horizon
+        ic_ir_prediction_horizon_str = selected_row_data[14] # Index 14 for "IC/IR Prediction Horizon"
+        if ic_ir_prediction_horizon_str:
+            try:
+                current_ic_ir_prediction_horizon = int(ic_ir_prediction_horizon_str.split(': ')[1])
+            except (ValueError, IndexError):
+                pass # Keep default if parsing fails
+
+        # Parse IC/IR Prediction Horizon
+        ic_ir_prediction_horizon_str = selected_row_data[14] # Index 14 for "IC/IR Prediction Horizon"
+        if ic_ir_prediction_horizon_str:
+            try:
+                current_ic_ir_prediction_horizon = int(ic_ir_prediction_horizon_str.split(': ')[1])
+            except (ValueError, IndexError):
+                pass # Keep default if parsing fails
+
         # Now call analyze_crypto_activity with the extracted parameters and hyperparameter_search_mode=False
         results_generator = analyze_crypto_activity(
             crypto_selection, manual_binance_symbol, manual_owner, manual_repo,
@@ -493,6 +538,7 @@ with gr.Blocks() as demo:
             current_sell_score, "",
             current_sma1, "",
             current_sma2, "",
+            current_ic_ir_prediction_horizon, "", # Pass single value, empty string for range
             apply_commission_to_plot, enable_dynamic_updates, False # hyperparameter_search_mode = False
         )
         
@@ -518,6 +564,7 @@ with gr.Blocks() as demo:
             short_sma_period_input, long_sma_period_input,
             buy_score_threshold_input, sell_score_threshold_input,
             sma1_period_input, sma2_period_input,
+            ic_ir_prediction_horizon_input,
             apply_commission_checkbox, dynamic_updates_checkbox,
             output_hyperparameter_results # Add the dataframe itself as an input
         ],

@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-def run_backtest(price_series, signals, initial_capital, commission_rate, currency):
+def run_backtest(price_series, signals, initial_capital, commission_rate, currency, ic_ir_prediction_horizon):
     """
     Performs a simple backtest as a generator, yielding results for each day.
     This allows for real-time updates in the UI.
@@ -20,10 +20,13 @@ def run_backtest(price_series, signals, initial_capital, commission_rate, curren
     trades_info = []
     open_trade = None
 
+    # For IC/IR calculation
+    ic_ir_data = []
+
     if price_series.empty or signals.empty:
         # Yield a single error state if data is missing
         error_metrics = {"Error": "Price or signal data is empty, cannot backtest."}
-        yield pd.Series(1.0, index=price_series.index), pd.Series(1.0, index=price_series.index), [], [], error_metrics
+        yield pd.Series(1.0, index=price_series.index), pd.Series(1.0, index=price_series.index), [], [], error_metrics, []
         return # Stop the generator
 
     # --- Main Backtesting Loop ---
@@ -31,6 +34,14 @@ def run_backtest(price_series, signals, initial_capital, commission_rate, curren
         current_date = price_series.index[i]
         current_price = price_series.iloc[i]
         signal = signals.iloc[i]
+
+        # Calculate actual future return for IC/IR
+        future_price_index = i + ic_ir_prediction_horizon
+        if future_price_index < len(price_series):
+            future_price = price_series.iloc[future_price_index]
+            if not pd.isna(current_price) and not pd.isna(future_price) and current_price != 0:
+                actual_return = (future_price - current_price) / current_price
+                ic_ir_data.append((current_date, signal, actual_return))
 
         # --- Update Portfolio Based on Signals ---
         if pd.isna(current_price):
@@ -190,3 +201,31 @@ def run_backtest(price_series, signals, initial_capital, commission_rate, curren
 
         # --- Yield the current state ---
         yield cumulative_returns_wc, buy_and_hold_cumulative_returns, buy_points, sell_points, performance_metrics, trades_info
+
+    # --- Final IC/IR Calculation (after loop completes) ---
+    ic = 0.0
+    ir = 0.0
+
+    if ic_ir_data:
+        df_ic_data = pd.DataFrame(ic_ir_data, columns=['date', 'signal', 'return'])
+        df_ic_data = df_ic_data.set_index('date')
+
+        # Calculate overall IC
+        if not df_ic_data.empty and df_ic_data['signal'].std() != 0 and df_ic_data['return'].std() != 0:
+            ic = df_ic_data['signal'].corr(df_ic_data['return'])
+            if pd.isna(ic):
+                ic = 0.0
+
+        # Calculate monthly ICs for IR
+        monthly_ics = df_ic_data.groupby(pd.Grouper(freq='M')).apply(lambda x: x['signal'].corr(x['return']))
+        monthly_ics = monthly_ics.dropna() # Remove months with no data or invalid correlation
+
+        if not monthly_ics.empty and monthly_ics.std() != 0:
+            ir = monthly_ics.mean() / monthly_ics.std()
+
+    # Add IC and IR to final performance metrics
+    performance_metrics["IC"] = f"{ic:.4f}"
+    performance_metrics["IR"] = f"{ir:.4f}"
+
+    # Yield final results with updated performance metrics
+    yield cumulative_returns_wc, buy_and_hold_cumulative_returns, buy_points, sell_points, performance_metrics, trades_info
