@@ -31,7 +31,7 @@ def llm_strategy_generator(commit_df, price_series, buy_score_threshold, sell_sc
             if progress:
                 progress(idx / len(new_commit_messages), desc=f"Analyzing new commits with LLM ({idx+1}/{len(new_commit_messages)})")
             analysis_result,cache = get_llm_analysis(message, cache) # get_llm_analysis now updates the cache directly
-            print(cache)
+            print(f"分析進度{idx}/{len(new_commit_messages)}")
             save_cache(cache) # Save cache after 1 new commits are analyzed
         print("Finished analyzing new commit messages and updated cache.")
     else:

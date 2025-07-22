@@ -48,7 +48,7 @@ def save_cache(cache_data):
     try:
         with open(CACHE_FILE, 'w', encoding='utf-8') as f:
             json.dump(cache_data, f, ensure_ascii=False, indent=4)
-            print(f"成功保存快取:{cache_data}")
+            print(f"成功保存快取")
     except IOError as e:
         print(f"Error saving cache: {e}")
 
@@ -87,7 +87,6 @@ def get_llm_analysis(commit_message, cache, max_retries=3, initial_backoff=5):
             print(f"開始分析commit message:{str(commit_message)[:50]}")
             time.sleep(1)
             response = model.generate_content(prompt)
-            print(f"response:{response}")
             json_str = response.text.replace("```json", "").replace("```", "").strip()
             analysis_result = json.loads(json_str)
             print(f"分析結果:{str(analysis_result)[:50]}")
