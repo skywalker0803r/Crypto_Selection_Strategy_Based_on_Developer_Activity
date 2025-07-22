@@ -11,7 +11,7 @@ BASE_URL = "https://api.github.com"
 CACHE_FILE = "llm_analysis_cache.json"
 
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(override=True)
 
 # --- API Keys and Headers ---
 TOKEN = os.getenv("GITHUB_TOKEN")
@@ -38,6 +38,7 @@ def load_cache():
         return {}
     try:
         with open(CACHE_FILE, 'r', encoding='utf-8') as f:
+            print(f"成功載入快取:{CACHE_FILE}")
             return json.load(f)
     except (json.JSONDecodeError, IOError):
         return {}
@@ -47,6 +48,7 @@ def save_cache(cache_data):
     try:
         with open(CACHE_FILE, 'w', encoding='utf-8') as f:
             json.dump(cache_data, f, ensure_ascii=False, indent=4)
+            print(f"成功保存快取:{cache_data}")
     except IOError as e:
         print(f"Error saving cache: {e}")
 
@@ -64,6 +66,7 @@ def get_llm_analysis(commit_message, cache, max_retries=3, initial_backoff=5):
     max_retries = 5
     while retries < max_retries:
         try:
+            initialize_gemini(GEMINI_API_KEY)
             model = genai.GenerativeModel('gemini-2.5-flash')
             prompt = f"""
             請分析以下加密貨幣專案的 Git Commit 訊息，並提供簡潔的總結分析，
@@ -80,14 +83,17 @@ def get_llm_analysis(commit_message, cache, max_retries=3, initial_backoff=5):
             Commit 訊息：
             {commit_message}
             """
+            print("調用LLM API前先延遲1秒")
+            print(f"開始分析commit message:{str(commit_message)[:50]}")
             time.sleep(1)
             response = model.generate_content(prompt)
-            
+            print(f"response:{response}")
             json_str = response.text.replace("```json", "").replace("```", "").strip()
             analysis_result = json.loads(json_str)
+            print(f"分析結果:{str(analysis_result)[:50]}")
             
             cache[commit_message] = analysis_result
-            return analysis_result
+            return analysis_result,cache
 
         except Exception as e:
             if "429" in str(e) or "ResourceExhausted" in str(e):
