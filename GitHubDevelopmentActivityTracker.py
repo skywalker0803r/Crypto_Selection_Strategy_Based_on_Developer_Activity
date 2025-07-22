@@ -470,7 +470,7 @@ with gr.Blocks() as demo:
         current_ic_ir_prediction_horizon = ic_ir_prediction_horizon_input
 
         # Parse Simple Commit Threshold Params
-        simple_commit_params_str = selected_row_data[8] # Index 8 for "Simple Commit Threshold Params"
+        simple_commit_params_str = selected_row_data[10] # Index 10 for "Simple Commit Threshold Params"
         if simple_commit_params_str:
             parts = simple_commit_params_str.split(', ')
             for part in parts:
@@ -480,7 +480,7 @@ with gr.Blocks() as demo:
                     current_sell_threshold = int(part.split(': ')[1])
 
         # Parse Commit SMA Params
-        commit_sma_params_str = selected_row_data[9] # Index 9 for "Commit SMA Params"
+        commit_sma_params_str = selected_row_data[11] # Index 11 for "Commit SMA Params"
         if commit_sma_params_str:
             parts = commit_sma_params_str.split(', ')
             for part in parts:
@@ -490,7 +490,7 @@ with gr.Blocks() as demo:
                     current_long_sma = int(part.split(': ')[1])
 
         # Parse LLM Commit Analysis Params
-        llm_params_str = selected_row_data[10] # Index 10 for "LLM Commit Analysis Params"
+        llm_params_str = selected_row_data[12] # Index 12 for "LLM Commit Analysis Params"
         if llm_params_str:
             parts = llm_params_str.split(', ')
             for part in parts:
@@ -500,7 +500,7 @@ with gr.Blocks() as demo:
                     current_sell_score = int(part.split(': ')[1])
 
         # Parse Simple SMA Params
-        simple_sma_params_str = selected_row_data[11] # Index 11 for "Simple SMA Params"
+        simple_sma_params_str = selected_row_data[13] # Index 13 for "Simple SMA Params"
         if simple_sma_params_str:
             parts = simple_sma_params_str.split(', ')
             for part in parts:
